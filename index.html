@@ -234,6 +234,68 @@
 
   #ann-toolbar{position:absolute;background:var(--accent);color:#fff;padding:4px 8px;border-radius:4px;font-size:11px;z-index:40;display:none;cursor:pointer;white-space:nowrap}
 
+  /* Tutorial overlay */
+  #tutorial-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:400;display:none;align-items:center;justify-content:center}
+  #tutorial-overlay.show{display:flex}
+  #tutorial-card{
+    background:var(--surface);border:1px solid var(--border);
+    border-radius:var(--radius);padding:24px 20px 20px;max-width:380px;width:90%;
+    box-shadow:var(--shadow);text-align:center;position:relative;transition:background .3s;
+  }
+  #tutorial-card h2{font-size:20px;color:var(--accent);margin-bottom:4px}
+  #tutorial-card .tut-subtitle{font-size:12px;color:var(--text-dim);margin-bottom:16px}
+  #tutorial-card .tut-icon{font-size:48px;display:block;margin-bottom:8px}
+  #tutorial-card .tut-body{font-size:14px;color:var(--text);line-height:1.7;margin-bottom:16px;text-align:left}
+  #tutorial-card .tut-body kbd{
+    background:var(--surface2);border:1px solid var(--border);border-radius:4px;
+    padding:1px 5px;font-size:12px;font-family:var(--mono);color:var(--accent)
+  }
+  #tutorial-card .tut-step-dots{display:flex;justify-content:center;gap:6px;margin-bottom:16px}
+  #tutorial-card .tut-step-dot{width:8px;height:8px;border-radius:50%;background:var(--border);transition:background .2s}
+  #tutorial-card .tut-step-dot.active{background:var(--accent)}
+  #tutorial-card .tut-buttons{display:flex;gap:8px;justify-content:center}
+  #tutorial-card button{
+    background:var(--accent);color:#fff;border:none;padding:8px 20px;border-radius:var(--radius-sm);
+    cursor:pointer;font-size:13px;font-family:var(--font);transition:filter .15s;
+  }
+  #tutorial-card button:hover{filter:brightness(1.1)}
+  #tutorial-card button.secondary{background:var(--surface2);color:var(--text)}
+  #tutorial-card button.link{background:none;color:var(--text-dim);font-size:11px;padding:4px 8px;text-decoration:underline}
+  #tutorial-card .tut-spotlight{
+    position:absolute;border:2px solid var(--accent);border-radius:6px;
+    box-shadow:0 0 0 9999px rgba(0,0,0,.6);pointer-events:none;z-index:-1;transition:all .35s ease;
+  }
+  #help-btn{
+    position:fixed;bottom:80px;right:16px;width:36px;height:36px;
+    background:var(--accent);color:#fff;border:none;border-radius:50%;
+    font-size:18px;cursor:pointer;z-index:100;box-shadow:var(--shadow);
+    display:flex;align-items:center;justify-content:center;transition:transform .15s;
+  }
+  #help-btn:hover{transform:scale(1.1)}
+
+  /* Feature tour (in-app highlight tooltips) */
+  .feature-tip{
+    position:fixed;background:var(--surface);border:1px solid var(--accent);
+    border-radius:var(--radius-sm);padding:8px 12px;font-size:12px;color:var(--text);
+    box-shadow:0 0 16px var(--accent-glow);z-index:350;max-width:200px;line-height:1.5;
+    pointer-events:none;opacity:0;transition:opacity .3s;text-align:left;
+  }
+  .feature-tip.show{opacity:1}
+  .feature-tip::after{
+    content:'';position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);
+    width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;
+    border-top:6px solid var(--accent);
+  }
+  .feature-tip.bottom::after{top:-6px;bottom:auto;border-top:none;border-bottom:6px solid var(--accent)}
+
+  /* demo content badge */
+  #demo-badge{
+    position:absolute;top:50px;right:20px;background:var(--accent);color:#fff;
+    padding:3px 10px;border-radius:10px;font-size:11px;z-index:15;display:none;
+    cursor:pointer;animation:pulse 2s infinite;
+  }
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+
   @media (max-width:700px){
     #sidebar{position:fixed;left:0;top:0;bottom:0;z-index:50;width:260px}
     #sidebar.collapsed{width:0}
@@ -315,6 +377,11 @@
 </div>
 
 <div id="modal-overlay"><div id="modal"></div></div>
+<div id="feature-tip" class="feature-tip"></div>
+<div id="tutorial-overlay">
+  <div id="tutorial-card"></div>
+</div>
+<div id="demo-badge">&#127912; 演示内容</div>
 <div id="stats-panel"><button id="stats-close">&times;</button></div>
 <div id="toast"></div>
 <div id="ann-toolbar">添加批注</div>
@@ -1000,6 +1067,7 @@ document.addEventListener('keydown',e=>{
     case 'b':e.preventDefault();addBookmark('');break;
     case 'f':e.preventDefault();toggleFocusMode();break;
     case 'k':e.preventDefault();toggleKaraokeMode();break;
+    case 'h':e.preventDefault();if(typeof showTutorial==='function')showTutorial(0);break;
   }
 });
 
@@ -1022,9 +1090,206 @@ window.addEventListener('beforeunload',saveDraft);
 })();
 
 // Init
+function initTutorial() {
+  const TUT_KEY = 'pr-tutorial-done';
+  const TUT_STEP_KEY = 'pr-tutorial-step';
+  const tutDone = localStorage.getItem(TUT_KEY);
+  window.showTutorial = function(step) {
+    renderTutorial(step !== undefined ? step : 0);
+  };
+
+  function renderTutorial(step) {
+    const steps = [
+      { icon: '&#127911;', title: '欢迎使用磨耳朵', body: '把文字变成播客，像平时听播客一样<strong>磨耳朵</strong>。<br><br>支持 <kbd>txt</kbd> <kbd>md</kbd> <kbd>pdf</kbd> <kbd>epub</kbd> <kbd>图片</kbd> <kbd>RSS</kbd> <kbd>网页</kbd> 等多种导入方式。<br><br>准备好了吗？跟着指引快速上手 👇' },
+      { icon: '&#9997;', title: '第 1 步：导入内容', body: '<strong>三种方式导入文字：</strong><br><br>1️⃣ 直接<strong>粘贴</strong>文字到中间区域<br>2️⃣ <strong>拖入</strong> txt / pdf / epub / 图片文件<br>3️⃣ 点击顶部 <kbd>&#9881; 设置</kbd> → 输入网页 URL 或 RSS 地址<br><br>试试看：任意网页按 <kbd>F12</kbd> 打开控制台，粘贴前面提供的 Bookmarklet 脚本即可一键导入当前网页。' },
+      { icon: '&#9654;', title: '第 2 步：开始播放', body: '点击底部<strong>播放按钮</strong>或按<strong>空格键</strong>开始朗读。<br><br>朗读时：<br>&#8226; 当前词会<strong>高亮显示</strong>，自动跟随<br>&#8226; 顶部可切换 <kbd>0.75x</kbd> ~ <kbd>2x</kbd> 语速<br>&#8226; 按 <kbd>&#9664;&#9664;</kbd> <kbd>&#9654;&#9654;</kbd> 或 <kbd>←</kbd> <kbd>→</kbd> 快退/快进 15 秒' },
+      { icon: '&#128278;', title: '第 3 步：书签 & 批注', body: '<strong>随时标记，随时回顾：</strong><br><br>&#8226; 按 <kbd>b</kbd> 或点击右上 <kbd>&#128278;</kbd> 添加<strong>书签</strong><br>&#8226; 进度条上的绿点就是书签，点击可跳转<br>&#8226; 选中文字后弹出批注工具，添加<strong>批注</strong><br>&#8226; 批注文字会有下划线，点击可查看' },
+      { icon: '&#128190;', title: '第 4 步：保存播客集', body: '点击右上 <kbd>&#128190; 保存</kbd> 存入侧边栏。<br><br>&#8226; 所有播客集自动保存到<strong>浏览器本地</strong><br>&#8226; 点击左侧 <kbd>&#9776;</kbd> 打开侧边栏管理<br>&#8226; 开启连续播放 &#128257; 可<strong>自动播下一集</strong><br>&#8226; 设置 → 同步 → 可导出/导入备份' },
+      { icon: '&#9889;', title: '第 5 步：高级功能', body: '<strong>更多实用功能：</strong><br><br>&#8226; <kbd>&#9878; 聚焦模式</kbd> — 只高亮当前段落<br>&#8226; <kbd>&#9655; 卡拉OK</kbd> — 当前行居中大字显示<br>&#8226; <kbd>&#9889; 跳过静音</kbd> — 去掉朗读间的停顿<br>&#8226; <kbd>&#9201; 定时关闭</kbd> — 睡前自动停<br>&#8226; <kbd>&#9788; 浅色主题</kbd> — 白天看更舒服<br>&#8226; <kbd>MP3 导出</kbd> — 需配置 AI 语音引擎' },
+      { icon: '&#129302;', title: 'AI 语音（可选）', body: '系统自带 TTS 免费，但音质机械。<br><br>想听<strong>接近真人</strong>的声音？<br><br>点击 <kbd>&#9881; 设置</kbd> → AI 语音 → 选择 <strong>ElevenLabs</strong> 或 <strong>OpenAI TTS</strong> → 填入 API Key。<br><br>ElevenLabs 中文效果最好，推荐 Multilingual v2 模型。<br><br>配置后即可启用 <strong>MP3 导出</strong>、情感参数调节等。' },
+      { icon: '&#127881;', title: '全部掌握！', body: '你已经学会了所有核心功能 🎉<br><br>&#8226; 底部 <kbd>?</kbd> 按钮可随时重新查看教程<br>&#8226; 遇到问题？右下角 <kbd>?</kbd> 点击即可<br><br>享受你的播客时光吧 ☕' },
+    ];
+
+    if (step >= steps.length) {
+      finishTutorial();
+      return;
+    }
+
+    if (step < 0) step = 0;
+
+    // Show feature tip for contextual steps
+    const elTip = $('#feature-tip');
+    elTip.classList.remove('show');
+
+    const card = $('#tutorial-card');
+    card.innerHTML = `
+      <span class="tut-icon">${steps[step].icon}</span>
+      <h2>${steps[step].title}</h2>
+      <div class="tut-step-dots">${steps.map((_,i)=>`<div class="tut-step-dot${i===step?' active':''}"></div>`).join('')}</div>
+      <div class="tut-body">${steps[step].body}</div>
+      <div class="tut-buttons">
+        ${step > 0 ? '<button class="secondary" id="tut-prev">上一步</button>' : ''}
+        ${step < steps.length - 1 ? '<button id="tut-next">'+(step===0?'开始':'下一步')+'</button>' : '<button id="tut-finish">完成</button>'}
+        <button class="link" id="tut-skip">跳过教程</button>
+      </div>
+    `;
+
+    $('#tutorial-overlay').classList.add('show');
+
+    // Bind buttons
+    const btnPrev = $('#tut-prev');
+    const btnNext = $('#tut-next');
+    const btnFinish = $('#tut-finish');
+    const btnSkip = $('#tut-skip');
+
+    if (btnPrev) btnPrev.addEventListener('click', () => renderTutorial(step - 1));
+    if (btnNext) btnNext.addEventListener('click', () => renderTutorial(step + 1));
+    if (btnFinish) btnFinish.addEventListener('click', finishTutorial);
+    if (btnSkip) btnSkip.addEventListener('click', finishTutorial);
+
+    // Contextual feature highlights for steps 1-6
+    showContextualTip(step);
+
+    // Save current step
+    localStorage.setItem(TUT_STEP_KEY, step);
+  }
+
+  function showContextualTip(step) {
+    const elTip = $('#feature-tip');
+    elTip.classList.remove('show');
+
+    // Map step to element to highlight
+    const highlights = {
+      1: { el: '#text-display', msg: '👆 在这里粘贴文字或拖入文件', pos: 'bottom' },
+      2: { el: '#btn-play', msg: '👆 点击播放或按空格键', pos: 'top' },
+      3: { el: '#btn-bookmark', msg: '👆 添加书签标记当前位置', pos: 'bottom' },
+      4: { el: '#btn-save', msg: '👆 保存为播客集', pos: 'bottom' },
+      5: { el: '#btn-smart-speed', msg: '高级功能在这里', pos: 'top' },
+      6: { el: '#btn-settings', msg: '👆 点击设置配置 AI 语音', pos: 'bottom' },
+    };
+
+    const h = highlights[step];
+    if (!h) {
+      // Dim the spotlight
+      const spot = document.createElement('div');
+      spot.id = 'tut-spotlight-temp';
+      spot.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.4);pointer-events:none;z-index:350;transition:opacity .3s';
+      const old = $('#tut-spotlight-temp');
+      if (old) old.remove();
+      document.body.appendChild(spot);
+      return;
+    }
+
+    removeSpotlight();
+    const target = $(h.el);
+    if (!target) return;
+
+    const rect = target.getBoundingClientRect();
+    const spot = document.createElement('div');
+    spot.id = 'tut-spotlight-temp';
+    spot.style.cssText = `
+      position:fixed;left:${rect.left-6}px;top:${rect.top-6}px;
+      width:${rect.width+12}px;height:${rect.height+12}px;
+      border:2px solid var(--accent);border-radius:8px;
+      box-shadow:0 0 0 9999px rgba(0,0,0,.55);
+      pointer-events:none;z-index:350;transition:all .25s;
+    `;
+    document.body.appendChild(spot);
+
+    // Position tip
+    elTip.textContent = h.msg;
+    elTip.className = 'feature-tip ' + (h.pos || 'top') + ' show';
+    if (h.pos === 'bottom') {
+      elTip.style.top = (rect.bottom + 12) + 'px';
+    } else {
+      elTip.style.bottom = (window.innerHeight - rect.top + 12) + 'px';
+    }
+    elTip.style.left = Math.max(10, rect.left + rect.width/2 - 100) + 'px';
+  }
+
+  function removeSpotlight() {
+    const el = $('#tut-spotlight-temp');
+    if (el) el.remove();
+  }
+
+  function finishTutorial() {
+    $('#tutorial-overlay').classList.remove('show');
+    removeSpotlight();
+    const elTip = $('#feature-tip');
+    elTip.classList.remove('show');
+    localStorage.setItem(TUT_KEY, '1');
+    localStorage.removeItem(TUT_STEP_KEY);
+
+    // Load demo content if first time and no content
+    if (!episodes.length && !elText.textContent.trim()) {
+      loadDemoContent();
+    }
+  }
+
+  function loadDemoContent() {
+    const demoText = `人工智能正在深刻改变我们的生活方式。从智能手机上的语音助手，到自动驾驶汽车，再到医疗诊断中的影像分析，AI 已经渗透到了社会的方方面面。
+
+在语音技术领域，文本转语音（TTS）系统已经从早期的机械式发音，发展到了今天几乎可以以假乱真的自然语音合成。现代 TTS 不仅能准确读出文字，还能根据上下文调整语调、语速和情感表达。
+
+深度学习模型的突破是这一进步的关键。通过在海量语音数据上训练，AI 学会了人类说话时的微妙变化——什么时候停顿、什么时候重读、什么时候加快或放慢。
+
+对于学习语言的人来说，这意味着一场革命。你不再需要找人朗读给你听，也不需要反复听同一段录音。只需要把文字投喂给 AI，它就能像一位耐心的朗读者一样，用自然的语调为你读出每一个字。
+
+这就是"磨耳朵"的意义所在——通过反复聆听，让耳朵逐渐适应目标语言的节奏和语调。就像婴儿学说话一样，听多了，自然就会了。
+
+无论是准备雅思听力考试，还是想提高英语语感，或是单纯想用碎片时间多吸收一些信息，文字转语音都是你的得力助手。
+
+打开一本书，粘贴一段文字，点击播放，闭上眼静静听。知识就这样流进了耳朵里。`;
+
+    elText.textContent = demoText;
+    elTitle.value = 'AI 与语音技术 · 演示播客';
+    resetWords();
+    updateProgressUI();
+    saveDraft();
+    const badge = $('#demo-badge');
+    badge.style.display = 'block';
+    badge.addEventListener('click', () => {
+      badge.style.display = 'none';
+      elText.textContent = '';
+      elTitle.value = '';
+      resetWords();
+      updateProgressUI();
+      saveDraft();
+    });
+    toast('已加载演示内容，点击播放试试吧');
+
+    // Auto-remove badge after playback starts
+    const origPlay = elBtnPlay.onclick;
+    const check = () => {
+      if (isPlaying) {
+        badge.style.display = 'none';
+        elBtnPlay.removeEventListener('click', check);
+      }
+    };
+    elBtnPlay.addEventListener('click', check);
+  }
+
+  // Reshow tutorial on step resume
+  const savedStep = localStorage.getItem(TUT_STEP_KEY);
+  if (savedStep !== null && !tutDone) {
+    setTimeout(() => renderTutorial(parseInt(savedStep)), 300);
+  }
+}
+
 loadEpisodes();loadDraft();loadSettings();renderEpisodeList();resetWords();updateProgressUI();renderBookmarkDots();renderAnnotationMarks();updatePlayButton();
 if(!elText.textContent.trim()&&!episodes.length)elText.focus();
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+
+  // Tutorial
+  initTutorial();
+  // Help button
+  const elHelpBtn = document.createElement('button');
+  elHelpBtn.id = 'help-btn';
+  elHelpBtn.title = '使用帮助';
+  elHelpBtn.textContent = '?';
+  elHelpBtn.addEventListener('click', showTutorial);
+  document.body.appendChild(elHelpBtn);
+  if (!episodes.length && !elText.textContent.trim()) showTutorial(0);
 
 console.log('🎧 磨耳朵 v3 已就绪');
 console.log('  TTS | MP3导出 | OCR扫描 | RSS | 聚焦/卡拉OK | 批注 | 书签 | 统计 | 同步 | Bookmarklet');
