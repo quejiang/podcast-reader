@@ -2,7 +2,12 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0f0f14">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="磨耳朵">
+<link rel="manifest" href="manifest.json">
 <title>磨耳朵 · Podcast Reader</title>
 <style>
   :root {
@@ -20,10 +25,23 @@
     --radius-sm: 8px;
     --font: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
     --mono: "SF Mono", "Fira Code", "Cascadia Code", monospace;
+    --shadow: 0 2px 8px rgba(0,0,0,0.3);
+  }
+
+  body.light {
+    --bg: #f5f5f7;
+    --surface: #ffffff;
+    --surface2: #eaeaef;
+    --border: #d5d5dd;
+    --text: #1a1a2e;
+    --text-dim: #7a7a8e;
+    --accent: #e05550;
+    --accent-glow: rgba(224,85,80,0.2);
+    --shadow: 0 2px 8px rgba(0,0,0,0.08);
   }
 
   * { margin:0; padding:0; box-sizing:border-box; }
-  html, body { height:100%; }
+  html, body { height:100%; -webkit-tap-highlight-color: transparent; }
 
   body {
     font-family: var(--font);
@@ -34,34 +52,37 @@
     overflow: hidden;
     user-select: none;
     -webkit-user-select: none;
+    transition: background 0.3s, color 0.3s;
   }
 
   /* ── Top bar ── */
   #topbar {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 10px 20px;
+    gap: 10px;
+    padding: 8px 16px;
     background: var(--surface);
     border-bottom: 1px solid var(--border);
     flex-shrink: 0;
     z-index: 10;
+    transition: background 0.3s;
+    flex-wrap: wrap;
   }
   #topbar .logo {
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 700;
     letter-spacing: -0.5px;
     color: var(--accent);
     white-space: nowrap;
   }
   #topbar .logo span { color: var(--text-dim); font-weight: 400; }
-  #topbar .spacer { flex:1; }
+  #topbar .spacer { flex:1; min-width: 8px; }
 
   .ctrl-group {
     display: flex;
     align-items: center;
-    gap: 6px;
-    font-size: 13px;
+    gap: 4px;
+    font-size: 12px;
     color: var(--text-dim);
   }
   .ctrl-group select, .ctrl-group input[type=range] {
@@ -69,99 +90,138 @@
     color: var(--text);
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
-    padding: 5px 8px;
-    font-size: 13px;
+    padding: 4px 6px;
+    font-size: 12px;
     outline: none;
     cursor: pointer;
+    transition: background 0.3s;
   }
   .ctrl-group select:focus { border-color: var(--accent); }
   .ctrl-group input[type=range] {
     -webkit-appearance: none;
-    height: 4px;
+    height: 3px;
     padding: 0;
     background: var(--border);
-    width: 80px;
+    width: 64px;
   }
   .ctrl-group input[type=range]::-webkit-slider-thumb {
     -webkit-appearance: none;
-    width: 14px; height: 14px;
+    width: 12px; height: 12px;
     border-radius: 50%;
     background: var(--accent);
     cursor: pointer;
   }
-  #speed-label { min-width: 36px; text-align: center; font-variant-numeric: tabular-nums; font-family: var(--mono); }
+  .speed-preset {
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 11px;
+    background: var(--surface2);
+    color: var(--text-dim);
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.15s;
+    font-family: var(--mono);
+  }
+  .speed-preset:hover { border-color: var(--border); color: var(--text); }
+  .speed-preset.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  #pitch-label { min-width: 24px; font-family: var(--mono); font-size: 11px; }
+
+  .btn-icon {
+    background: none; border: none; color: var(--text-dim);
+    cursor: pointer; font-size: 16px; padding: 4px 8px;
+    border-radius: var(--radius-sm);
+    transition: all 0.15s;
+    position: relative;
+    white-space: nowrap;
+  }
+  .btn-icon:hover { color: var(--text); background: var(--surface2); }
+  .btn-icon.active { color: var(--accent); }
+
+  /* Sleep timer badge */
+  .sleep-timer-badge {
+    position: absolute;
+    top: -2px; right: -2px;
+    background: var(--accent); color: #fff;
+    border-radius: 10px;
+    font-size: 10px;
+    padding: 1px 5px;
+    display: none;
+    line-height: 1.4;
+    pointer-events: none;
+  }
+  .sleep-timer-badge.show { display: block; }
 
   /* ── Layout ── */
-  #main {
-    display: flex;
-    flex: 1;
-    overflow: hidden;
-  }
+  #main { display: flex; flex: 1; overflow: hidden; }
 
   /* ── Sidebar ── */
   #sidebar {
-    width: 260px;
+    width: 280px;
     background: var(--surface);
     border-right: 1px solid var(--border);
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
-    transition: width 0.2s;
+    transition: width 0.25s, background 0.3s;
+    overflow: hidden;
   }
-  #sidebar.collapsed { width: 0; overflow: hidden; border:none; }
+  #sidebar.collapsed { width: 0; border:none; }
   #sidebar-header {
-    padding: 14px 16px;
+    padding: 12px 14px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     border-bottom: 1px solid var(--border);
     flex-shrink: 0;
+    gap: 8px;
   }
-  #sidebar-header h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim); }
+  #sidebar-header h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim); flex: 1; }
   #sidebar-header button {
     background: none; border: none; color: var(--text-dim);
     cursor: pointer; font-size: 16px; padding: 2px 6px;
+    border-radius: 4px;
   }
-  #sidebar-header button:hover { color: var(--text); }
+  #sidebar-header button:hover { color: var(--text); background: var(--surface2); }
   #episode-list {
     flex: 1;
     overflow-y: auto;
-    padding: 8px;
+    padding: 6px;
   }
   #episode-list::-webkit-scrollbar { width: 4px; }
   #episode-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
   .ep-card {
-    padding: 10px 12px;
+    padding: 9px 10px;
     border-radius: var(--radius-sm);
     cursor: pointer;
-    margin-bottom: 4px;
+    margin-bottom: 3px;
     transition: background 0.15s;
     display: flex;
     align-items: center;
     gap: 8px;
+    border-left: 3px solid transparent;
   }
   .ep-card:hover { background: var(--surface2); }
-  .ep-card.active { background: var(--surface2); border-left: 3px solid var(--accent); }
+  .ep-card.active { background: var(--surface2); border-left-color: var(--accent); }
   .ep-card .ep-info { flex:1; min-width: 0; }
-  .ep-card .ep-title { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .ep-card .ep-meta { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+  .ep-card .ep-title { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ep-card .ep-meta { font-size: 10px; color: var(--text-dim); margin-top: 1px; }
   .ep-card .ep-del {
     opacity: 0;
     background: none; border: none; color: var(--danger);
     cursor: pointer; font-size: 14px; padding: 2px 4px; border-radius: 4px;
-    transition: opacity 0.15s;
+    transition: opacity 0.15s; flex-shrink: 0;
   }
   .ep-card:hover .ep-del { opacity: 1; }
   .ep-card .ep-del:hover { background: rgba(224,85,106,0.15); }
   #no-episodes {
     text-align: center;
     color: var(--text-dim);
-    font-size: 13px;
+    font-size: 12px;
     padding: 30px 16px;
     line-height: 1.6;
   }
 
-  /* ── Editor / Player area ── */
+  /* ── Content ── */
   #content-area {
     flex: 1;
     display: flex;
@@ -170,28 +230,39 @@
     position: relative;
   }
 
+  #title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-right: 28px;
+    flex-shrink: 0;
+  }
   #title-input {
     width: 100%;
     border: none;
     background: transparent;
     color: var(--text);
-    font-size: 22px;
+    font-size: 20px;
     font-weight: 600;
-    padding: 18px 28px 10px;
+    padding: 14px 0 8px 28px;
     outline: none;
-    flex-shrink: 0;
     font-family: var(--font);
   }
   #title-input::placeholder { color: var(--text-dim); }
+  #btn-bookmark {
+    background: none; border: none; color: var(--text-dim);
+    cursor: pointer; font-size: 18px; padding: 4px; flex-shrink: 0;
+    border-radius: 4px; transition: all 0.15s;
+  }
+  #btn-bookmark:hover { color: var(--accent); }
 
   #text-display {
     flex: 1;
     overflow-y: auto;
-    padding: 10px 28px 20px;
+    padding: 6px 28px 20px;
     font-size: 17px;
     line-height: 1.85;
     letter-spacing: 0.01em;
-    position: relative;
     white-space: pre-wrap;
     word-break: break-word;
   }
@@ -204,22 +275,28 @@
     outline: none;
   }
   #text-display[contenteditable="true"]:empty::before {
-    content: "在这里粘贴文字，或拖入 txt / md 文件…";
+    content: "在这里粘贴文字，拖入文件，或点击 ⚙ 导入网页…";
     color: var(--text-dim);
     pointer-events: none;
-  }
-  #text-display .hl {
-    background: var(--accent-glow);
-    border-radius: 3px;
-    padding: 1px 0;
-    transition: background 0.15s;
   }
   #text-display mark {
     background: var(--accent);
     color: #fff;
     border-radius: 2px;
     padding: 0 1px;
+    transition: background 0.1s;
   }
+  #text-display .bk-indicator {
+    display: inline-block;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--play);
+    margin: 0 1px;
+    vertical-align: middle;
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+  #text-display .bk-indicator:hover { transform: scale(1.8); }
 
   /* Drop overlay */
   #drop-overlay {
@@ -243,11 +320,12 @@
   #player-bar {
     background: var(--surface);
     border-top: 1px solid var(--border);
-    padding: 10px 20px;
+    padding: 8px 20px;
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 4px;
+    transition: background 0.3s;
   }
   #progress-row {
     display: flex;
@@ -260,7 +338,6 @@
     background: var(--border);
     border-radius: 2px;
     cursor: pointer;
-    position: relative;
     overflow: hidden;
   }
   #progress-fill {
@@ -275,7 +352,7 @@
     color: var(--text-dim);
     font-variant-numeric: tabular-nums;
     font-family: var(--mono);
-    min-width: 90px;
+    min-width: 95px;
     text-align: right;
     white-space: nowrap;
   }
@@ -283,7 +360,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 16px;
+    gap: 12px;
   }
   .btn {
     background: none;
@@ -299,27 +376,97 @@
   .btn:hover { color: var(--text); }
   .btn:active { transform: scale(0.92); }
   #btn-play {
-    width: 48px; height: 48px;
+    width: 44px; height: 44px;
     background: var(--accent);
     color: #fff;
-    font-size: 20px;
+    font-size: 18px;
   }
-  #btn-play:hover { background: #f09070; color: #fff; }
-  #btn-play.paused { /* default */ }
-  .btn-skip { font-size: 18px; width: 36px; height: 36px; }
+  #btn-play:hover { filter: brightness(1.1); }
+  .btn-skip { font-size: 16px; width: 32px; height: 32px; }
 
-  #btn-save {
+  /* ── Settings Modal ── */
+  #modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 200;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  #modal-overlay.show { display: flex; }
+  #modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    max-width: 480px;
+    width: 100%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow);
+    transition: background 0.3s;
+  }
+  #modal h3 { font-size: 16px; margin-bottom: 16px; color: var(--text); }
+  #modal label { display: block; font-size: 13px; color: var(--text-dim); margin-bottom: 4px; }
+  #modal input[type=text], #modal input[type=url], #modal input[type=password], #modal textarea {
+    width: 100%;
     background: var(--surface2);
     color: var(--text);
     border: 1px solid var(--border);
-    padding: 6px 14px;
     border-radius: var(--radius-sm);
+    padding: 8px 10px;
+    font-size: 13px;
+    outline: none;
+    font-family: var(--font);
+    margin-bottom: 12px;
+    resize: vertical;
+  }
+  #modal input:focus, #modal textarea:focus { border-color: var(--accent); }
+  #modal .row { display: flex; gap: 8px; }
+  #modal button {
+    background: var(--accent); color: #fff;
+    border: none; padding: 8px 16px;
+    border-radius: var(--radius-sm);
+    cursor: pointer; font-size: 13px;
+    font-family: var(--font);
+  }
+  #modal button:hover { filter: brightness(1.1); }
+  #modal button.secondary {
+    background: var(--surface2); color: var(--text);
+  }
+  #modal .divider { border-top: 1px solid var(--border); margin: 16px 0; }
+
+  /* Bookmarks panel */
+  #bookmark-panel {
+    position: absolute;
+    right: 8px;
+    top: 50px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 8px;
+    min-width: 180px;
+    max-height: 240px;
+    overflow-y: auto;
+    box-shadow: var(--shadow);
+    z-index: 30;
+    display: none;
+  }
+  #bookmark-panel.show { display: block; }
+  #bookmark-panel .bm-item {
+    padding: 6px 8px;
     font-size: 13px;
     cursor: pointer;
-    font-family: var(--font);
-    transition: all 0.15s;
+    border-radius: 4px;
+    color: var(--text);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
   }
-  #btn-save:hover { border-color: var(--accent); color: var(--accent); }
+  #bookmark-panel .bm-item:hover { background: var(--surface2); }
+  #bookmark-panel .bm-item .bm-del { color: var(--danger); font-size: 12px; cursor: pointer; padding: 2px 6px; }
+  #bookmark-panel .bm-empty { color: var(--text-dim); font-size: 12px; text-align: center; padding: 12px; }
 
   /* Toast */
   #toast {
@@ -336,26 +483,22 @@
     opacity: 0;
     transition: opacity 0.3s;
     pointer-events: none;
-    z-index: 100;
+    z-index: 300;
+    white-space: nowrap;
   }
   #toast.show { opacity: 1; }
 
-  /* Toggle sidebar */
-  #btn-toggle-sidebar {
-    background: none; border: none; color: var(--text-dim);
-    cursor: pointer; font-size: 18px; padding: 4px 8px;
-  }
-  #btn-toggle-sidebar:hover { color: var(--text); }
-
-  @media (max-width: 640px) {
-    #sidebar { width: 0; overflow: hidden; border: none; }
-    #sidebar.open { width: 260px; position: absolute; height: 100%; z-index: 30; }
-    #text-display { padding: 10px 16px 20px; font-size: 16px; }
-    #title-input { padding: 14px 16px 8px; font-size: 18px; }
-    #topbar { padding: 8px 12px; gap: 8px; }
-    #topbar .logo { font-size: 17px; }
+  @media (max-width: 700px) {
+    #sidebar { position: fixed; left: 0; top: 0; bottom: 0; z-index: 50; width: 280px; }
+    #sidebar.collapsed { width: 0; }
+    #sidebar.collapsed.open { width: 280px; }
+    #text-display { padding: 6px 14px 16px; font-size: 15px; }
+    #title-input { padding: 12px 14px 6px; font-size: 16px; }
+    #topbar { padding: 6px 10px; gap: 6px; }
+    #topbar .logo { font-size: 15px; }
+    #player-bar { padding: 6px 12px; }
     .ctrl-group { font-size: 11px; }
-    .ctrl-group input[type=range] { width: 50px; }
+    #modal { max-width: 100vw; padding: 16px; }
   }
 </style>
 </head>
@@ -363,29 +506,39 @@
 
 <!-- Top bar -->
 <div id="topbar">
-  <button id="btn-toggle-sidebar" title="侧边栏">&#9776;</button>
+  <button class="btn-icon" id="btn-toggle-sidebar" title="侧边栏">&#9776;</button>
   <div class="logo">磨耳朵<span> · Podcast Reader</span></div>
   <div class="spacer"></div>
-  <div class="ctrl-group">
-    <label>语速</label>
-    <input type="range" id="speed-slider" min="0.5" max="2.5" step="0.05" value="1">
-    <span id="speed-label">1.0x</span>
+  <div class="ctrl-group" id="speed-presets">
+    <span class="speed-preset" data-rate="0.75">0.75x</span>
+    <span class="speed-preset active" data-rate="1">1x</span>
+    <span class="speed-preset" data-rate="1.25">1.25x</span>
+    <span class="speed-preset" data-rate="1.5">1.5x</span>
+    <span class="speed-preset" data-rate="2">2x</span>
   </div>
   <div class="ctrl-group">
-    <label>声音</label>
-    <select id="voice-select"></select>
+    <span>音调</span>
+    <input type="range" id="pitch-slider" min="0.5" max="2" step="0.1" value="1">
+    <span id="pitch-label">1.0</span>
   </div>
-  <button id="btn-save" title="保存为播客集">保存</button>
+  <div class="ctrl-group">
+    <select id="voice-select" style="max-width:100px;"></select>
+  </div>
+  <button class="btn-icon" id="btn-sleep" title="定时关闭">&#9201;<span class="sleep-timer-badge" id="sleep-badge"></span></button>
+  <button class="btn-icon" id="btn-mode" title="切换浅色/暗色">&#9788;</button>
+  <button class="btn-icon" id="btn-settings" title="设置">&#9881;</button>
+  <button class="btn-icon" id="btn-save" title="保存为播客集" style="color:var(--accent);">&#128190;</button>
 </div>
 
 <!-- Main layout -->
 <div id="main">
 
   <!-- Sidebar - episodes -->
-  <div id="sidebar">
+  <div id="sidebar" class="collapsed">
     <div id="sidebar-header">
       <h3>我的播客集</h3>
       <button id="btn-new-ep" title="新建">+</button>
+      <button id="btn-auto-next" title="连续播放">&#128257;</button>
     </div>
     <div id="episode-list">
       <div id="no-episodes">还没有保存的播客集<br>粘贴文字或拖入文件后点击「保存」</div>
@@ -394,9 +547,13 @@
 
   <!-- Content -->
   <div id="content-area">
-    <input type="text" id="title-input" placeholder="播客标题…">
+    <div id="title-row">
+      <input type="text" id="title-input" placeholder="播客标题…">
+      <button id="btn-bookmark" title="书签">&#128278;</button>
+    </div>
     <div id="text-display" contenteditable="true"></div>
     <div id="drop-overlay">释放文件以导入</div>
+    <div id="bookmark-panel"></div>
   </div>
 </div>
 
@@ -405,6 +562,7 @@
   <div id="progress-row">
     <div id="progress-bar">
       <div id="progress-fill"></div>
+      <div id="bookmark-dots" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;"></div>
     </div>
     <div id="time-display">--:-- / --:--</div>
   </div>
@@ -415,8 +573,17 @@
   </div>
 </div>
 
+<!-- Settings Modal -->
+<div id="modal-overlay">
+  <div id="modal"></div>
+</div>
+
 <!-- Toast -->
 <div id="toast"></div>
+
+<!-- External libraries -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
 <script>
 (function() {
@@ -426,47 +593,96 @@
   const $ = (s) => document.querySelector(s);
   const $$ = (s) => document.querySelectorAll(s);
 
-  const elTitle      = $('#title-input');
-  const elText       = $('#text-display');
-  const elDropOverlay= $('#drop-overlay');
-  const elVoiceSel   = $('#voice-select');
-  const elSpeedSlider= $('#speed-slider');
-  const elSpeedLabel = $('#speed-label');
-  const elBtnPlay    = $('#btn-play');
-  const elBtnRew     = $('#btn-rew');
-  const elBtnFwd     = $('#btn-fwd');
-  const elBtnSave    = $('#btn-save');
-  const elBtnNew     = $('#btn-new-ep');
-  const elBtnToggle  = $('#btn-toggle-sidebar');
-  const elSidebar    = $('#sidebar');
-  const elEpList     = $('#episode-list');
-  const elNoEps      = $('#no-episodes');
-  const elProgressFill = $('#progress-fill');
-  const elTimeDisplay  = $('#time-display');
-  const elToast      = $('#toast');
+  const elTitle       = $('#title-input');
+  const elText        = $('#text-display');
+  const elDropOverlay = $('#drop-overlay');
+  const elVoiceSel    = $('#voice-select');
+  const elPitchSlider = $('#pitch-slider');
+  const elPitchLabel  = $('#pitch-label');
+  const elBtnPlay     = $('#btn-play');
+  const elBtnRew      = $('#btn-rew');
+  const elBtnFwd      = $('#btn-fwd');
+  const elBtnSave     = $('#btn-save');
+  const elBtnNew      = $('#btn-new-ep');
+  const elBtnAutoNext = $('#btn-auto-next');
+  const elBtnToggle   = $('#btn-toggle-sidebar');
+  const elBtnMode     = $('#btn-mode');
+  const elBtnSettings = $('#btn-settings');
+  const elBtnSleep    = $('#btn-sleep');
+  const elBtnBookmark = $('#btn-bookmark');
+  const elSleepBadge  = $('#sleep-badge');
+  const elSidebar     = $('#sidebar');
+  const elEpList      = $('#episode-list');
+  const elProgressFill= $('#progress-fill');
+  const elTimeDisplay = $('#time-display');
+  const elToast       = $('#toast');
+  const elModalOverlay= $('#modal-overlay');
+  const elModal       = $('#modal');
+  const elBmPanel     = $('#bookmark-panel');
 
   // ─── State ───────────────────────────────────
-  let episodes     = [];
-  let currentEpId  = null;   // null = unsaved draft
-  let isPlaying    = false;
-  let chunks       = [];      // { text, charStart, charEnd }
-  let chunkIndex   = -1;
-  let charProgress = 0;       // chars spoken so far
-  let totalChars   = 0;
+  let episodes      = [];
+  let currentEpId   = null;
+  let isPlaying     = false;
+  let words         = [];        // [{ text, charStart, charEnd }] - word-level chunks
+  let wordIndex     = -1;
+  let charProgress  = 0;
+  let totalChars    = 0;
   let currentUtterance = null;
-  let voices       = [];
-  let toastTimer   = null;
+  let voices        = [];
+  let toastTimer    = null;
+  let bookmarks     = [];        // [{ charPos, label, id }]
+  let autoNext      = false;
+  let sleepTimer    = null;
+  let sleepSeconds  = 0;
+  let sleepInterval = null;
+  let aiMode        = null;      // null | 'elevenlabs' | 'openai'
+  let aiAudioQueue  = [];
+  let aiAudio       = null;      // current <audio> element
 
   // ─── Settings ────────────────────────────────
-  function getSpeed()  { return parseFloat(elSpeedSlider.value); }
-  function getVoice()  { return voices.find(v => v.voiceURI === elVoiceSel.value) || null; }
+  function getSpeed() {
+    const active = $('#speed-presets .speed-preset.active');
+    return active ? parseFloat(active.dataset.rate) : 1;
+  }
+  function getPitch() { return parseFloat(elPitchSlider.value); }
+  function getVoice() { return voices.find(v => v.voiceURI === elVoiceSel.value) || null; }
+
+  function loadSettings() {
+    try {
+      const s = JSON.parse(localStorage.getItem('podcast-reader-settings') || '{}');
+      if (s.voice) elVoiceSel.value = s.voice;
+      if (s.pitch) { elPitchSlider.value = s.pitch; elPitchLabel.textContent = s.pitch; }
+      if (s.rate) {
+        const presets = $$('#speed-presets .speed-preset');
+        presets.forEach(p => p.classList.remove('active'));
+        const match = [...presets].find(p => p.dataset.rate === s.rate);
+        if (match) match.classList.add('active');
+      }
+      if (s.autoNext !== undefined) {
+        autoNext = s.autoNext;
+        elBtnAutoNext.classList.toggle('active', autoNext);
+      }
+      if (s.theme === 'light') document.body.classList.add('light');
+    } catch {}
+  }
+  function saveSettings() {
+    const s = {
+      voice: elVoiceSel.value,
+      pitch: getPitch().toFixed(1),
+      rate: getSpeed().toFixed(2),
+      autoNext,
+      theme: document.body.classList.contains('light') ? 'light' : 'dark',
+    };
+    localStorage.setItem('podcast-reader-settings', JSON.stringify(s));
+  }
 
   // ─── Toast ───────────────────────────────────
-  function toast(msg) {
+  function toast(msg, duration) {
     clearTimeout(toastTimer);
     elToast.textContent = msg;
     elToast.classList.add('show');
-    toastTimer = setTimeout(() => elToast.classList.remove('show'), 2000);
+    toastTimer = setTimeout(() => elToast.classList.remove('show'), duration || 2000);
   }
 
   // ─── Episode management ─────────────────────
@@ -486,29 +702,19 @@
         const d = JSON.parse(draft);
         elTitle.value = d.title || '';
         elText.textContent = d.content || '';
-        currentEpId = null;
+        currentEpId = d.epId || null;
+        if (d.bookmarks) bookmarks = d.bookmarks;
       } catch {}
     }
   }
   function saveDraft() {
-    const draft = { title: elTitle.value, content: elText.textContent || '' };
+    const draft = {
+      title: elTitle.value,
+      content: elText.textContent || '',
+      epId: currentEpId,
+      bookmarks,
+    };
     localStorage.setItem('podcast-reader-draft', JSON.stringify(draft));
-  }
-  function loadSettings() {
-    try {
-      const s = JSON.parse(localStorage.getItem('podcast-reader-settings') || '{}');
-      if (s.speed)  elSpeedSlider.value = s.speed;
-      if (s.voice)  elVoiceSel.value = s.voice;
-      elSpeedLabel.textContent = parseFloat(elSpeedSlider.value).toFixed(1) + 'x';
-    } catch {}
-  }
-  function saveSettings() {
-    const s = { speed: getSpeed(), voice: elVoiceSel.value };
-    localStorage.setItem('podcast-reader-settings', JSON.stringify(s));
-  }
-
-  function findEpIndex(id) {
-    return episodes.findIndex(e => e.id === id);
   }
 
   function renderEpisodeList() {
@@ -523,7 +729,7 @@
       card.innerHTML = `
         <div class="ep-info">
           <div class="ep-title">${escapeHtml(ep.title || '未命名')}</div>
-          <div class="ep-meta">${escapeHtml(ep.createdAt)} · ${charCount(ep.content)}</div>
+          <div class="ep-meta">${escapeHtml(ep.createdAt || '')} · ${charCount(ep.content)}</div>
         </div>
         <button class="ep-del" data-id="${ep.id}" title="删除">&times;</button>
       `;
@@ -546,9 +752,11 @@
     currentEpId = ep.id;
     elTitle.value = ep.title || '';
     elText.textContent = ep.content || '';
+    bookmarks = ep.bookmarks || [];
     renderEpisodeList();
-    resetChunks();
+    resetWords();
     updateProgressUI();
+    renderBookmarkDots();
     toast('已加载');
   }
 
@@ -558,17 +766,17 @@
     if (!content.trim()) { toast('请先输入文字内容'); return; }
 
     if (currentEpId !== null) {
-      const idx = findEpIndex(currentEpId);
+      const idx = episodes.findIndex(e => e.id === currentEpId);
       if (idx >= 0) {
         episodes[idx].title = title;
         episodes[idx].content = content;
+        episodes[idx].bookmarks = bookmarks;
         episodes[idx].updatedAt = new Date().toLocaleString('zh-CN');
       }
     } else {
       const ep = {
         id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-        title,
-        content,
+        title, content, bookmarks,
         createdAt: new Date().toLocaleString('zh-CN'),
         updatedAt: new Date().toLocaleString('zh-CN'),
       };
@@ -589,11 +797,13 @@
       currentEpId = null;
       elTitle.value = '';
       elText.textContent = '';
+      bookmarks = [];
     }
     saveEpisodes();
     renderEpisodeList();
-    resetChunks();
+    resetWords();
     updateProgressUI();
+    renderBookmarkDots();
     toast('已删除');
   }
 
@@ -602,17 +812,29 @@
     currentEpId = null;
     elTitle.value = '';
     elText.textContent = '';
+    bookmarks = [];
     renderEpisodeList();
-    resetChunks();
+    resetWords();
     updateProgressUI();
+    renderBookmarkDots();
     saveDraft();
     elText.focus();
+  }
+
+  function playNextEpisode() {
+    if (!autoNext) return;
+    if (!currentEpId) return;
+    const idx = episodes.findIndex(e => e.id === currentEpId);
+    if (idx < 0 || idx >= episodes.length - 1) return;
+    loadEpisode(episodes[idx + 1].id);
+    setTimeout(startPlayback, 200);
+    toast('自动播放下一集');
   }
 
   // ─── Helpers ─────────────────────────────────
   function escapeHtml(s) {
     const div = document.createElement('div');
-    div.textContent = s;
+    div.textContent = s || '';
     return div.innerHTML;
   }
   function charCount(s) {
@@ -628,32 +850,49 @@
     return String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
   }
 
-  // ─── Text chunking ───────────────────────────
-  function buildChunks(text) {
-    // Split text into sentences (Chinese + English punctuation)
-    const sentences = text.split(/(?<=[。！？\n\.!\?])/g).filter(s => s.trim());
-    if (sentences.length === 0) return [];
+  // ─── Text chunking (word-level) ─────────────
+  function buildWords(text) {
+    // Split into word-level tokens for finer highlighting
+    // Chinese: split by characters, keeping groups for better TTS
+    // English/other: split by word boundaries
+    if (!text || !text.trim()) return [];
 
     const result = [];
     let pos = 0;
-    for (const s of sentences) {
-      const start = pos;
-      const end = pos + s.length;
-      result.push({ text: s, charStart: start, charEnd: end });
-      pos = end;
+
+    // Split by mixed content: Chinese chars, English words, punctuation
+    const re = /([\u4e00-\u9fff\u3400-\u4dbf]+|[a-zA-Z0-9]+|[\u3000-\u303f\uff00-\uffef]|[^\S\n]+|[\n]+|[^\u4e00-\u9fff\u3400-\u4dbfa-zA-Z0-9\s])/g;
+    let m;
+    while ((m = re.exec(text)) !== null) {
+      const t = m[1];
+      if (!t) continue;
+      const start = m.index;
+      const end = start + t.length;
+
+      // For long Chinese segments, further split into smaller groups for word-level highlight
+      if (/^[\u4e00-\u9fff\u3400-\u4dbf]+$/.test(t) && t.length > 3) {
+        // Split into groups of 2-3 chars
+        for (let i = 0; i < t.length; i += 2) {
+          const sub = t.slice(i, Math.min(i + 3, t.length));
+          result.push({ text: sub, charStart: start + i, charEnd: start + i + sub.length });
+        }
+      } else {
+        result.push({ text: t, charStart: start, charEnd: end });
+      }
     }
+
     return result;
   }
 
-  function resetChunks() {
+  function resetWords() {
     const text = elText.textContent || '';
-    chunks = buildChunks(text);
-    chunkIndex = -1;
+    words = buildWords(text);
+    wordIndex = -1;
     charProgress = 0;
     totalChars = text.length;
   }
 
-  // ─── Highlighting ────────────────────────────
+  // ─── Highlighting (word-level) ───────────────
   function clearHighlight() {
     const marks = elText.querySelectorAll('mark');
     marks.forEach(m => {
@@ -663,13 +902,10 @@
     });
   }
 
-  function highlightChunk(index) {
+  function highlightWordRange(charStart, charEnd) {
     clearHighlight();
-    if (index < 0 || index >= chunks.length) return;
-    const ch = chunks[index];
-    if (!ch || ch.charEnd <= ch.charStart) return;
+    if (charStart >= charEnd || totalChars === 0) return;
 
-    // Use TreeWalker to find text nodes and mark the range
     const walker = document.createTreeWalker(elText, NodeFilter.SHOW_TEXT, null, false);
     let currentPos = 0;
     const nodesToSplit = [];
@@ -679,24 +915,20 @@
       const len = node.textContent.length;
       const nodeStart = currentPos;
       const nodeEnd = currentPos + len;
-
-      if (nodeEnd > ch.charStart && nodeStart < ch.charEnd) {
+      if (nodeEnd > charStart && nodeStart < charEnd) {
         nodesToSplit.push({ node, nodeStart, nodeEnd });
       }
       currentPos = nodeEnd;
-      if (currentPos >= ch.charEnd) break;
+      if (currentPos >= charEnd) break;
     }
 
-    // Process nodes in reverse so offsets don't shift
     for (let i = nodesToSplit.length - 1; i >= 0; i--) {
       const { node, nodeStart, nodeEnd } = nodesToSplit[i];
-      const relStart = Math.max(0, ch.charStart - nodeStart);
-      const relEnd   = Math.min(nodeEnd - nodeStart, ch.charEnd - nodeStart);
-
+      const relStart = Math.max(0, charStart - nodeStart);
+      const relEnd = Math.min(nodeEnd - nodeStart, charEnd - nodeStart);
       const before = node.textContent.slice(0, relStart);
       const middle = node.textContent.slice(relStart, relEnd);
-      const after  = node.textContent.slice(relEnd);
-
+      const after = node.textContent.slice(relEnd);
       const frag = document.createDocumentFragment();
       if (before) frag.appendChild(document.createTextNode(before));
       const mark = document.createElement('mark');
@@ -706,83 +938,240 @@
       node.parentNode.replaceChild(frag, node);
     }
 
-    // Scroll to the highlight
     const firstMark = elText.querySelector('mark');
     if (firstMark) {
       firstMark.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   }
 
-  // ─── TTS Engine ──────────────────────────────
+  // ─── Bookmarks ───────────────────────────────
+  function addBookmark(label) {
+    if (totalChars === 0) return;
+    const id = Date.now().toString(36);
+    bookmarks.push({ charPos: charProgress, label: label || '', id });
+    bookmarks.sort((a, b) => a.charPos - b.charPos);
+    renderBookmarkDots();
+    saveDraft();
+    toast('已添加书签');
+  }
+
+  function removeBookmark(id) {
+    bookmarks = bookmarks.filter(b => b.id !== id);
+    renderBookmarkDots();
+    saveDraft();
+  }
+
+  function jumpToBookmark(id) {
+    const bm = bookmarks.find(b => b.id === id);
+    if (!bm) return;
+    seekToChar(bm.charPos);
+    elBmPanel.classList.remove('show');
+  }
+
+  function renderBookmarkDots() {
+    const container = $('#bookmark-dots');
+    container.innerHTML = '';
+    if (totalChars === 0) return;
+    bookmarks.forEach(bm => {
+      const dot = document.createElement('div');
+      dot.style.cssText = `
+        position:absolute;left:${(bm.charPos / totalChars) * 100}%;
+        top:50%;transform:translate(-50%,-50%);
+        width:8px;height:8px;border-radius:50%;
+        background:var(--play);pointer-events:auto;
+        cursor:pointer;z-index:2;
+      `;
+      dot.title = bm.label || '书签';
+      dot.addEventListener('click', (e) => {
+        e.stopPropagation();
+        seekToChar(bm.charPos);
+      });
+      container.appendChild(dot);
+    });
+  }
+
+  function showBookmarkPanel() {
+    elBmPanel.innerHTML = '';
+    if (bookmarks.length === 0) {
+      elBmPanel.innerHTML = '<div class="bm-empty">暂无书签<br>播放中点击书签按钮添加</div>';
+    } else {
+      bookmarks.forEach(bm => {
+        const item = document.createElement('div');
+        item.className = 'bm-item';
+        const preview = (elText.textContent || '').slice(Math.max(0, bm.charPos - 10), bm.charPos + 15).trim();
+        item.innerHTML = `<span>${escapeHtml(bm.label || preview || '(空)')}</span><span class="bm-del" data-id="${bm.id}">&times;</span>`;
+        item.addEventListener('click', (e) => {
+          if (e.target.classList.contains('bm-del')) {
+            removeBookmark(bm.id);
+            showBookmarkPanel();
+          } else {
+            jumpToBookmark(bm.id);
+          }
+        });
+        elBmPanel.appendChild(item);
+      });
+    }
+    elBmPanel.classList.toggle('show');
+  }
+
+  // ─── Sleep Timer ──────────────────────────────
+  function showSleepMenu() {
+    const options = [
+      { label: '关闭', mins: 0 },
+      { label: '15 分钟', mins: 15 },
+      { label: '30 分钟', mins: 30 },
+      { label: '45 分钟', mins: 45 },
+      { label: '60 分钟', mins: 60 },
+    ];
+    elModal.innerHTML = '<h3>定时关闭</h3>' + options.map(o =>
+      `<button style="display:block;width:100%;margin-bottom:6px;" class="${sleepSeconds === o.mins * 60 ? '' : 'secondary'}" data-mins="${o.mins}">${o.label}</button>`
+    ).join('') + '<button class="secondary" style="margin-top:8px;width:100%;" id="btn-close-modal">取消</button>';
+    elModalOverlay.classList.add('show');
+    elModal.querySelectorAll('button[data-mins]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const mins = parseInt(btn.dataset.mins);
+        setSleepTimer(mins * 60);
+        elModalOverlay.classList.remove('show');
+      });
+    });
+    $('#btn-close-modal').addEventListener('click', () => elModalOverlay.classList.remove('show'));
+  }
+
+  function setSleepTimer(seconds) {
+    clearInterval(sleepInterval);
+    sleepSeconds = seconds;
+    if (seconds <= 0) {
+      elSleepBadge.classList.remove('show');
+      elSleepBadge.textContent = '';
+      toast('定时关闭已取消');
+      return;
+    }
+    updateSleepBadge();
+    elSleepBadge.classList.add('show');
+    sleepInterval = setInterval(() => {
+      sleepSeconds--;
+      updateSleepBadge();
+      if (sleepSeconds <= 0) {
+        clearInterval(sleepInterval);
+        stopPlayback();
+        elSleepBadge.classList.remove('show');
+        toast('定时关闭 - 播放已停止', 3000);
+      }
+    }, 1000);
+    toast('将于 ' + formatTime(seconds) + ' 后停止');
+  }
+
+  function updateSleepBadge() {
+    const m = Math.floor(sleepSeconds / 60);
+    const s = sleepSeconds % 60;
+    elSleepBadge.textContent = m + ':' + String(s).padStart(2, '0');
+  }
+
+  // ─── TTS Engine (Browser Speech) ─────────────
   function populateVoices() {
     voices = speechSynthesis.getVoices();
     elVoiceSel.innerHTML = '';
-
-    // Prefer Chinese voices, then all
     const zhVoices = voices.filter(v => v.lang.startsWith('zh'));
     const otherVoices = voices.filter(v => !v.lang.startsWith('zh'));
-
-    const grouped = [
+    for (const group of [
       { label: '中文', voices: zhVoices },
-      { label: '其他语言', voices: otherVoices },
-    ];
-
-    for (const group of grouped) {
+      { label: '其他', voices: otherVoices },
+    ]) {
       if (group.voices.length === 0) continue;
-      const optgroup = document.createElement('optgroup');
-      optgroup.label = group.label;
+      const og = document.createElement('optgroup');
+      og.label = group.label;
       for (const v of group.voices) {
         const opt = document.createElement('option');
         opt.value = v.voiceURI;
-        opt.textContent = `${v.name} (${v.lang})`;
-        optgroup.appendChild(opt);
+        opt.textContent = v.name.split(' ').slice(0, 2).join(' ');
+        og.appendChild(opt);
       }
-      elVoiceSel.appendChild(optgroup);
+      elVoiceSel.appendChild(og);
     }
-
-    // Restore saved voice
     loadSettings();
     if (!elVoiceSel.value && zhVoices.length > 0) {
       elVoiceSel.value = zhVoices[0].voiceURI;
     }
   }
 
-  function speakChunk(index) {
-    if (index >= chunks.length) {
+  function speakWord(index) {
+    if (index >= words.length) {
       // Playback finished
       stopPlayback();
       toast('播放完毕');
       updateProgressUI();
+      if (autoNext) setTimeout(playNextEpisode, 500);
       return;
     }
-    if (!isPlaying && currentUtterance === null) return; // stopped
+    if (!isPlaying && currentUtterance === null) return;
 
-    chunkIndex = index;
-    const ch = chunks[index];
+    wordIndex = index;
+    const w = words[index];
 
-    const utter = new SpeechSynthesisUtterance(ch.text);
+    // Group nearby small words into a single utterance for smoother TTS
+    // but only advance charProgress word-by-word via onboundary
+    let speakText = w.text;
+    let speakStart = w.charStart;
+    let speakEnd = w.charEnd;
+
+    // Combine with next few small tokens for better prosody
+    let j = index + 1;
+    while (j < words.length && (words[j].text.match(/^[\u4e00-\u9fff]+$/) ? words[j].text.length <= 2 : words[j].text.length <= 3) && j - index < 4) {
+      speakText += words[j].text;
+      speakEnd = words[j].charEnd;
+      j++;
+    }
+    const wordsInGroup = j - index;
+    const groupWordLengths = [];
+    let cumLen = 0;
+    for (let k = index; k < j; k++) {
+      cumLen += words[k].text.length;
+      groupWordLengths.push(cumLen);
+    }
+
+    const utter = new SpeechSynthesisUtterance(speakText);
     utter.voice = getVoice();
     utter.rate = getSpeed();
+    utter.pitch = getPitch();
     utter.lang = utter.voice ? utter.voice.lang : 'zh-CN';
 
+    let lastBoundaryIndex = 0;
+
     utter.onstart = () => {
-      charProgress = ch.charStart;
-      highlightChunk(index);
+      charProgress = speakStart;
+      highlightWordRange(speakStart, Math.min(speakStart + 5, speakEnd));
       updateProgressUI();
     };
 
     utter.onboundary = (evt) => {
-      if (evt.charIndex !== undefined) {
-        charProgress = ch.charStart + evt.charIndex;
-        updateProgressUI();
+      if (evt.charIndex !== undefined && evt.charIndex > lastBoundaryIndex) {
+        lastBoundaryIndex = evt.charIndex;
+        // Map boundary char index back to word position
+        for (let k = 0; k < groupWordLengths.length; k++) {
+          if (evt.charIndex <= groupWordLengths[k]) {
+            const wi = index + k;
+            if (wi < words.length) {
+              charProgress = words[wi].charStart + Math.max(0, evt.charIndex - (k > 0 ? groupWordLengths[k - 1] : 0));
+              highlightWordRange(words[wi].charStart, words[wi].charEnd);
+              updateProgressUI();
+            }
+            break;
+          }
+        }
       }
     };
 
     utter.onend = () => {
-      charProgress = ch.charEnd;
+      // Advance past all words in this group
+      const lastWordIdx = index + wordsInGroup - 1;
+      if (lastWordIdx < words.length) {
+        charProgress = words[lastWordIdx].charEnd;
+      } else {
+        charProgress = speakEnd;
+      }
       updateProgressUI();
       if (isPlaying) {
-        speakChunk(index + 1);
+        speakWord(lastWordIdx + 1);
       } else {
         currentUtterance = null;
       }
@@ -793,12 +1182,11 @@
         currentUtterance = null;
         return;
       }
-      console.warn('TTS error:', e.error);
-      // Try next chunk on error
-      charProgress = ch.charEnd;
+      // Advance on error
+      charProgress = speakEnd;
       updateProgressUI();
       if (isPlaying) {
-        setTimeout(() => speakChunk(index + 1), 100);
+        setTimeout(() => speakWord(index + wordsInGroup), 100);
       } else {
         currentUtterance = null;
       }
@@ -813,7 +1201,6 @@
     const text = elText.textContent || '';
     if (!text.trim()) { toast('请先输入文字内容'); return; }
 
-    // If we were paused mid-chunk, resume
     if (speechSynthesis.paused) {
       speechSynthesis.resume();
       isPlaying = true;
@@ -821,27 +1208,24 @@
       return;
     }
 
-    // Rebuild chunks if text has changed or no chunks yet
-    if (chunks.length === 0 || totalChars !== text.length) {
-      resetChunks();
+    if (words.length === 0 || totalChars !== text.length) {
+      resetWords();
     }
-    if (chunks.length === 0) { toast('没有可朗读的内容'); return; }
+    if (words.length === 0) { toast('没有可朗读的内容'); return; }
 
-    // Find starting chunk based on current progress
     let startIdx = 0;
     if (charProgress > 0 && charProgress < totalChars) {
-      for (let i = 0; i < chunks.length; i++) {
-        if (chunks[i].charEnd > charProgress) {
+      for (let i = 0; i < words.length; i++) {
+        if (words[i].charEnd > charProgress) {
           startIdx = i;
           break;
         }
       }
-      chunkIndex = startIdx;
     }
 
     isPlaying = true;
     updatePlayButton();
-    speakChunk(startIdx);
+    speakWord(startIdx);
   }
 
   function pausePlayback() {
@@ -854,16 +1238,23 @@
     isPlaying = false;
     speechSynthesis.cancel();
     currentUtterance = null;
+    // Also stop AI audio
+    if (aiAudio) { aiAudio.pause(); aiAudio = null; }
+    aiAudioQueue = [];
     updatePlayButton();
     clearHighlight();
   }
 
-  function seekByChars(deltaChars) {
-    if (chunks.length === 0) {
-      resetChunks();
-      if (chunks.length === 0) return;
-    }
+  function seekToChar(targetChar) {
+    if (targetChar < 0 || targetChar > totalChars) targetChar = Math.max(0, Math.min(totalChars, targetChar));
+    seekByChars(targetChar - charProgress);
+  }
 
+  function seekByChars(deltaChars) {
+    if (words.length === 0) {
+      resetWords();
+      if (words.length === 0) return;
+    }
     const wasPlaying = isPlaying;
     if (isPlaying) {
       speechSynthesis.cancel();
@@ -871,23 +1262,21 @@
     }
 
     charProgress = Math.max(0, Math.min(totalChars, charProgress + deltaChars));
-
-    // Find which chunk we land in
     let newIdx = 0;
-    for (let i = 0; i < chunks.length; i++) {
-      if (chunks[i].charEnd > charProgress) {
+    for (let i = 0; i < words.length; i++) {
+      if (words[i].charEnd > charProgress) {
         newIdx = i;
         break;
       }
-      newIdx = i;
+      newIdx = Math.min(i, words.length - 1);
     }
-    chunkIndex = newIdx;
+    wordIndex = newIdx;
     updateProgressUI();
-    highlightChunk(newIdx);
+    if (words[newIdx]) highlightWordRange(words[newIdx].charStart, words[newIdx].charEnd);
 
     if (wasPlaying) {
       isPlaying = true;
-      setTimeout(() => speakChunk(newIdx), 50);
+      setTimeout(() => speakWord(newIdx), 50);
     } else {
       isPlaying = false;
       updatePlayButton();
@@ -895,11 +1284,7 @@
   }
 
   function updatePlayButton() {
-    if (isPlaying) {
-      elBtnPlay.innerHTML = '&#10074;&#10074;'; // pause symbol
-    } else {
-      elBtnPlay.innerHTML = '&#9654;'; // play triangle
-    }
+    elBtnPlay.innerHTML = isPlaying ? '&#10074;&#10074;' : '&#9654;';
   }
 
   function updateProgressUI() {
@@ -910,115 +1295,281 @@
     }
     const pct = Math.min(100, Math.round((charProgress / totalChars) * 100));
     elProgressFill.style.width = pct + '%';
-
-    // Estimate time based on speech rate (~4 chars/sec for Chinese at 1x)
     const rate = getSpeed();
-    const cps = 3.5 * rate; // chars per second estimate
-    const elapsed = totalChars > 0 ? charProgress / cps : 0;
-    const total   = totalChars > 0 ? totalChars / cps : 0;
+    const cps = 4 * rate;
+    const elapsed = charProgress / cps;
+    const total = totalChars / cps;
     elTimeDisplay.textContent = formatTime(elapsed) + ' / ' + formatTime(total);
   }
 
-  // ─── Event handlers ──────────────────────────
-  elBtnPlay.addEventListener('click', () => {
-    if (isPlaying) {
-      pausePlayback();
-    } else {
-      startPlayback();
+  // ─── Settings Modal ───────────────────────────
+  function showSettings() {
+    const aiCfg = JSON.parse(localStorage.getItem('podcast-reader-ai') || '{}');
+    elModal.innerHTML = `
+      <h3>设置</h3>
+      <label>AI 语音引擎</label>
+      <select id="cfg-ai-mode" style="width:100%;margin-bottom:12px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px;font-size:13px;">
+        <option value="">系统自带 TTS（免费）</option>
+        <option value="elevenlabs" ${aiCfg.mode === 'elevenlabs' ? 'selected' : ''}>ElevenLabs（需 API Key）</option>
+        <option value="openai" ${aiCfg.mode === 'openai' ? 'selected' : ''}>OpenAI TTS（需 API Key）</option>
+      </select>
+      <div id="cfg-elevenlabs" style="display:none;">
+        <label>ElevenLabs API Key</label>
+        <input type="password" id="cfg-el-key" value="${escapeHtml(aiCfg.elevenLabsKey || '')}" placeholder="sk-...">
+        <label>Voice ID</label>
+        <input type="text" id="cfg-el-voice" value="${escapeHtml(aiCfg.elevenLabsVoice || '21m00Tcm4TlvDq8ikWAM')}" placeholder="Voice ID">
+        <small style="color:var(--text-dim);display:block;margin-bottom:12px;">默认 Bella 女声，可去 elevenlabs.io 复制其他 Voice ID</small>
+      </div>
+      <div id="cfg-openai" style="display:none;">
+        <label>OpenAI API Key</label>
+        <input type="password" id="cfg-oai-key" value="${escapeHtml(aiCfg.openaiKey || '')}" placeholder="sk-...">
+        <label>Voice</label>
+        <select id="cfg-oai-voice" style="width:100%;margin-bottom:12px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px;font-size:13px;">
+          <option value="alloy" ${aiCfg.openaiVoice === 'alloy' ? 'selected' : ''}>Alloy</option>
+          <option value="echo" ${aiCfg.openaiVoice === 'echo' ? 'selected' : ''}>Echo</option>
+          <option value="fable" ${aiCfg.openaiVoice === 'fable' ? 'selected' : ''}>Fable</option>
+          <option value="onyx" ${aiCfg.openaiVoice === 'onyx' ? 'selected' : ''}>Onyx</option>
+          <option value="nova" ${aiCfg.openaiVoice === 'nova' ? 'selected' : ''}>Nova</option>
+          <option value="shimmer" ${aiCfg.openaiVoice === 'shimmer' ? 'selected' : ''}>Shimmer</option>
+        </select>
+      </div>
+      <div class="divider"></div>
+      <label>导入网页 URL</label>
+      <div class="row">
+        <input type="url" id="cfg-url" placeholder="https://..." style="flex:1;">
+        <button id="btn-fetch-url">抓取</button>
+      </div>
+      <small style="color:var(--text-dim);display:block;margin-bottom:8px;">输入文章 URL，自动抓取正文（可能受跨域限制）</small>
+      <div class="divider"></div>
+      <div class="row">
+        <button id="btn-save-cfg" style="flex:1;">保存设置</button>
+        <button class="secondary" id="btn-close-modal">取消</button>
+      </div>
+    `;
+    elModalOverlay.classList.add('show');
+
+    const cfgAiMode = $('#cfg-ai-mode');
+    const cfgEl = $('#cfg-elevenlabs');
+    const cfgOai = $('#cfg-openai');
+
+    function updateAiFields() {
+      cfgEl.style.display = cfgAiMode.value === 'elevenlabs' ? 'block' : 'none';
+      cfgOai.style.display = cfgAiMode.value === 'openai' ? 'block' : 'none';
     }
-  });
+    updateAiFields();
+    cfgAiMode.addEventListener('change', updateAiFields);
 
-  elBtnRew.addEventListener('click', () => {
-    // Rewind ~15 seconds worth of chars
-    const cps = 3.5 * getSpeed();
-    seekByChars(-Math.round(15 * cps));
-  });
+    $('#btn-close-modal').addEventListener('click', () => elModalOverlay.classList.remove('show'));
 
-  elBtnFwd.addEventListener('click', () => {
-    const cps = 3.5 * getSpeed();
-    seekByChars(Math.round(15 * cps));
-  });
+    $('#btn-save-cfg').addEventListener('click', () => {
+      const aiCfgNew = {
+        mode: cfgAiMode.value,
+        elevenLabsKey: $('#cfg-el-key').value.trim(),
+        elevenLabsVoice: $('#cfg-el-voice').value.trim(),
+        openaiKey: $('#cfg-oai-key').value.trim(),
+        openaiVoice: $('#cfg-oai-voice').value,
+      };
+      localStorage.setItem('podcast-reader-ai', JSON.stringify(aiCfgNew));
+      aiMode = aiCfgNew.mode || null;
+      elModalOverlay.classList.remove('show');
+      toast('设置已保存');
+    });
 
-  elBtnSave.addEventListener('click', saveCurrentEpisode);
-  elBtnNew.addEventListener('click', newEpisode);
-
-  elBtnToggle.addEventListener('click', () => {
-    elSidebar.classList.toggle('collapsed');
-  });
-
-  // Progress bar click
-  $('#progress-bar').addEventListener('click', (e) => {
-    if (totalChars === 0) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const pct = (e.clientX - rect.left) / rect.width;
-    const targetChar = Math.round(pct * totalChars);
-    const delta = targetChar - charProgress;
-    seekByChars(delta);
-  });
-
-  // Speed slider
-  elSpeedSlider.addEventListener('input', () => {
-    elSpeedLabel.textContent = getSpeed().toFixed(1) + 'x';
-    saveSettings();
-    // Update rate of current utterance if playing
-    if (currentUtterance && isPlaying) {
-      currentUtterance.rate = getSpeed();
-      // Need to re-speak for rate change to take effect on some browsers
-      if (!speechSynthesis.paused && !speechSynthesis.speaking) {
-        // Just started a new utterance
-      } else if (speechSynthesis.speaking && !speechSynthesis.paused) {
-        // Restart current chunk with new rate
-        const idx = chunkIndex;
-        speechSynthesis.cancel();
-        currentUtterance = null;
-        isPlaying = true;
-        setTimeout(() => speakChunk(idx), 30);
+    $('#btn-fetch-url').addEventListener('click', async () => {
+      const url = $('#cfg-url').value.trim();
+      if (!url) { toast('请输入 URL'); return; }
+      try {
+        toast('正在抓取…', 5000);
+        const resp = await fetch(url, { mode: 'cors' });
+        const html = await resp.text();
+        const div = document.createElement('div');
+        div.innerHTML = html;
+        // Remove scripts, styles, nav, etc
+        div.querySelectorAll('script,style,nav,header,footer,aside,.sidebar,.nav,.menu,.ad,iframe').forEach(el => el.remove());
+        let text = div.textContent || '';
+        text = text.replace(/\n{3,}/g, '\n\n').trim();
+        if (text.length < 100) { toast('未能提取到有效内容，可能受跨域限制'); return; }
+        elText.textContent = text;
+        if (!elTitle.value.trim()) {
+          const titleEl = div.querySelector('title');
+          elTitle.value = titleEl ? titleEl.textContent.trim() : new URL(url).hostname;
+        }
+        stopPlayback();
+        currentEpId = null;
+        bookmarks = [];
+        resetWords();
+        updateProgressUI();
+        renderBookmarkDots();
+        saveDraft();
+        elModalOverlay.classList.remove('show');
+        toast('已导入网页内容');
+      } catch (e) {
+        toast('抓取失败：' + e.message + '（可能受跨域限制）', 3000);
       }
+    });
+  }
+
+  // ─── AI TTS (ElevenLabs / OpenAI) ─────────────
+  async function fetchAiAudio(text) {
+    const aiCfg = JSON.parse(localStorage.getItem('podcast-reader-ai') || '{}');
+    if (aiCfg.mode === 'elevenlabs') {
+      const key = aiCfg.elevenLabsKey;
+      const voiceId = aiCfg.elevenLabsVoice || '21m00Tcm4TlvDq8ikWAM';
+      if (!key) throw new Error('请先配置 ElevenLabs API Key');
+      const resp = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+        method: 'POST',
+        headers: { 'xi-api-key': key, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text,
+          model_id: 'eleven_multilingual_v2',
+          voice_settings: { stability: 0.5, similarity_boost: 0.75, speed: getSpeed() },
+        }),
+      });
+      if (!resp.ok) throw new Error('ElevenLabs API 错误: ' + resp.status);
+      return await resp.blob();
+    } else if (aiCfg.mode === 'openai') {
+      const key = aiCfg.openaiKey;
+      if (!key) throw new Error('请先配置 OpenAI API Key');
+      const resp = await fetch('https://api.openai.com/v1/audio/speech', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'tts-1',
+          input: text,
+          voice: aiCfg.openaiVoice || 'alloy',
+          speed: getSpeed(),
+        }),
+      });
+      if (!resp.ok) throw new Error('OpenAI API 错误: ' + resp.status);
+      return await resp.blob();
     }
-  });
+    throw new Error('未配置 AI 引擎');
+  }
 
-  // Voice select
-  elVoiceSel.addEventListener('change', saveSettings);
+  function speakAiChunk(index) {
+    if (index >= words.length) {
+      stopPlayback();
+      toast('播放完毕');
+      if (autoNext) setTimeout(playNextEpisode, 500);
+      return;
+    }
+    if (!isPlaying) return;
 
-  // Auto-save draft on edits
-  let draftSaveTimeout;
-  elTitle.addEventListener('input', () => {
-    clearTimeout(draftSaveTimeout);
-    draftSaveTimeout = setTimeout(saveDraft, 500);
-  });
-  elText.addEventListener('input', () => {
-    clearTimeout(draftSaveTimeout);
-    draftSaveTimeout = setTimeout(() => {
-      saveDraft();
-      resetChunks();
-      updateProgressUI();
-    }, 500);
-  });
-  elText.addEventListener('focus', () => {
-    // Clear any lingering highlights when user wants to edit
-    clearHighlight();
-  });
+    wordIndex = index;
+    const w = words[index];
+    highlightWordRange(w.charStart, w.charEnd);
+    charProgress = w.charStart;
+    updateProgressUI();
 
-  // File drag & drop
-  document.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    elDropOverlay.classList.add('show');
-  });
-  document.addEventListener('dragleave', (e) => {
-    if (e.relatedTarget === null) elDropOverlay.classList.remove('show');
-  });
+    // Batch a few words for the API call
+    let batchText = w.text;
+    let batchEnd = w.charEnd;
+    let j = index + 1;
+    while (j < words.length && batchText.length < 200 && j - index < 8) {
+      batchText += words[j].text;
+      batchEnd = words[j].charEnd;
+      j++;
+    }
+    const wordsInBatch = j - index;
+
+    fetchAiAudio(batchText).then(blob => {
+      if (!isPlaying) return;
+      const url = URL.createObjectURL(blob);
+      aiAudio = new Audio(url);
+      aiAudio.playbackRate = getSpeed();
+
+      // Simulate word-level progress via time intervals
+      const totalMs = (aiAudio.duration || batchText.length / 3.5 / getSpeed()) * 1000;
+      const msPerWord = totalMs / wordsInBatch;
+      let wordOffset = 0;
+      const interval = setInterval(() => {
+        if (!isPlaying || !aiAudio || aiAudio.paused) { clearInterval(interval); return; }
+        wordOffset++;
+        const wi = index + wordOffset;
+        if (wi < words.length) {
+          wordIndex = wi;
+          charProgress = words[wi].charStart;
+          highlightWordRange(words[wi].charStart, words[wi].charEnd);
+          updateProgressUI();
+        }
+      }, msPerWord);
+
+      aiAudio.onended = () => {
+        clearInterval(interval);
+        URL.revokeObjectURL(url);
+        charProgress = batchEnd;
+        updateProgressUI();
+        if (isPlaying) speakAiChunk(index + wordsInBatch);
+      };
+
+      aiAudio.onerror = () => {
+        clearInterval(interval);
+        URL.revokeObjectURL(url);
+        charProgress = batchEnd;
+        updateProgressUI();
+        if (isPlaying) setTimeout(() => speakAiChunk(index + wordsInBatch), 200);
+      };
+
+      aiAudio.play().catch(() => {});
+    }).catch(err => {
+      toast('AI TTS 失败：' + err.message, 3000);
+      // Fall back to browser TTS
+      aiMode = null;
+      isPlaying = false;
+      updatePlayButton();
+      setTimeout(() => {
+        isPlaying = true;
+        speakWord(index);
+      }, 100);
+    });
+  }
+
+  // ─── Overridden startPlayback for AI mode ────
+  const _startPlayback = startPlayback;
+  startPlayback = function() {
+    if (isPlaying) return;
+    const text = elText.textContent || '';
+    if (!text.trim()) { toast('请先输入文字内容'); return; }
+    if (words.length === 0 || totalChars !== text.length) resetWords();
+    if (words.length === 0) { toast('没有可朗读的内容'); return; }
+
+    const aiCfg = JSON.parse(localStorage.getItem('podcast-reader-ai') || '{}');
+    aiMode = aiCfg.mode || null;
+
+    if (aiMode) {
+      let startIdx = 0;
+      if (charProgress > 0 && charProgress < totalChars) {
+        for (let i = 0; i < words.length; i++) {
+          if (words[i].charEnd > charProgress) { startIdx = i; break; }
+        }
+      }
+      isPlaying = true;
+      updatePlayButton();
+      speakAiChunk(startIdx);
+    } else {
+      _startPlayback();
+    }
+  };
+
+  // ─── File Handling ────────────────────────────
   elDropOverlay.addEventListener('dragover', (e) => e.preventDefault());
   elDropOverlay.addEventListener('drop', (e) => {
-    e.stopPropagation();
-    e.preventDefault();
+    e.stopPropagation(); e.preventDefault();
     elDropOverlay.classList.remove('show');
     handleFiles(e.dataTransfer.files);
   });
 
-  // Also listen on body for drops that miss the overlay
+  document.addEventListener('dragover', (e) => {
+    e.preventDefault(); e.stopPropagation();
+    elDropOverlay.classList.add('show');
+  });
+  document.addEventListener('dragleave', (e) => {
+    if (e.relatedTarget === null || e.relatedTarget === document.documentElement) {
+      elDropOverlay.classList.remove('show');
+    }
+  });
+
   document.body.addEventListener('drop', (e) => {
-    // Only handle if not already handled by overlay
     if (e.target === elDropOverlay || elDropOverlay.contains(e.target)) return;
     e.preventDefault();
     elDropOverlay.classList.remove('show');
@@ -1028,7 +1579,6 @@
   });
   document.body.addEventListener('dragover', (e) => e.preventDefault());
 
-  // Paste handling for files
   document.addEventListener('paste', (e) => {
     const items = e.clipboardData?.items;
     if (!items) return;
@@ -1041,65 +1591,211 @@
     }
   });
 
-  function handleFiles(files) {
+  async function handleFiles(files) {
     const file = files[0];
     if (!file) return;
     const ext = file.name.split('.').pop().toLowerCase();
-    if (!['txt', 'md', 'markdown', 'html', 'htm'].includes(ext)) {
-      toast('支持 txt、md、html 文件');
-      return;
+
+    try {
+      if (ext === 'pdf') {
+        toast('正在解析 PDF…', 5000);
+        const arrayBuf = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuf }).promise;
+        let text = '';
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          text += content.items.map(it => it.str).join(' ') + '\n';
+        }
+        setText(text, file.name);
+      } else if (ext === 'epub') {
+        toast('正在解析 EPUB…', 5000);
+        const arrayBuf = await file.arrayBuffer();
+        const zip = await JSZip.loadAsync(arrayBuf);
+        // Find content files (xhtml/html)
+        const htmlFiles = Object.keys(zip.files).filter(f => f.endsWith('.xhtml') || f.endsWith('.html') || f.endsWith('.htm'));
+        let text = '';
+        for (const f of htmlFiles) {
+          const htmlStr = await zip.files[f].async('string');
+          const div = document.createElement('div');
+          div.innerHTML = htmlStr;
+          div.querySelectorAll('script,style,rt,rp').forEach(el => el.remove());
+          text += div.textContent + '\n';
+        }
+        text = text.replace(/\n{3,}/g, '\n\n').trim();
+        setText(text, file.name);
+      } else if (['txt', 'md', 'markdown', 'html', 'htm'].includes(ext)) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          let text = reader.result;
+          if (ext === 'html' || ext === 'htm') {
+            const div = document.createElement('div');
+            div.innerHTML = text;
+            text = div.textContent;
+          }
+          setText(text, file.name);
+        };
+        reader.readAsText(file);
+      } else {
+        toast('支持 txt / md / html / pdf / epub 文件');
+      }
+    } catch (e) {
+      toast('文件解析失败：' + e.message, 3000);
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      let text = reader.result;
-      if (ext === 'html' || ext === 'htm') {
-        // Strip HTML tags
-        const div = document.createElement('div');
-        div.innerHTML = text;
-        text = div.textContent;
-      }
-      elText.textContent = text;
-      if (!elTitle.value.trim()) {
-        elTitle.value = file.name.replace(/\.[^.]+$/, ''); // use filename as title
-      }
-      stopPlayback();
-      currentEpId = null;
-      resetChunks();
-      updateProgressUI();
-      saveDraft();
-      toast('已导入：' + file.name);
-    };
-    reader.readAsText(file);
   }
+
+  function setText(text, filename) {
+    elText.textContent = text;
+    if (!elTitle.value.trim() && filename) {
+      elTitle.value = filename.replace(/\.[^.]+$/, '');
+    }
+    stopPlayback();
+    currentEpId = null;
+    bookmarks = [];
+    resetWords();
+    updateProgressUI();
+    renderBookmarkDots();
+    saveDraft();
+    toast('已导入：' + (filename || '内容'));
+  }
+
+  // ─── Event bindings ───────────────────────────
+  elBtnPlay.addEventListener('click', () => isPlaying ? pausePlayback() : startPlayback());
+
+  elBtnRew.addEventListener('click', () => {
+    const cps = 4 * getSpeed();
+    seekByChars(-Math.round(15 * cps));
+  });
+
+  elBtnFwd.addEventListener('click', () => {
+    const cps = 4 * getSpeed();
+    seekByChars(Math.round(15 * cps));
+  });
+
+  elBtnSave.addEventListener('click', saveCurrentEpisode);
+  elBtnNew.addEventListener('click', newEpisode);
+
+  elBtnToggle.addEventListener('click', () => elSidebar.classList.toggle('collapsed'));
+  elBtnMode.addEventListener('click', () => {
+    document.body.classList.toggle('light');
+    saveSettings();
+  });
+  elBtnSettings.addEventListener('click', showSettings);
+  elBtnSleep.addEventListener('click', showSleepMenu);
+  elBtnBookmark.addEventListener('click', () => {
+    if (totalChars === 0) return;
+    const label = prompt('书签备注（可选）：');
+    addBookmark(label || '');
+    showBookmarkPanel();
+  });
+
+  elBtnAutoNext.addEventListener('click', () => {
+    autoNext = !autoNext;
+    elBtnAutoNext.classList.toggle('active', autoNext);
+    saveSettings();
+    toast(autoNext ? '已开启连续播放' : '已关闭连续播放');
+  });
+
+  // Speed presets
+  $$('#speed-presets .speed-preset').forEach(btn => {
+    btn.addEventListener('click', () => {
+      $$('#speed-presets .speed-preset').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      saveSettings();
+      // If playing with browser TTS, update rate
+      if (currentUtterance && isPlaying && !aiMode) {
+        const idx = wordIndex;
+        speechSynthesis.cancel();
+        currentUtterance = null;
+        isPlaying = true;
+        setTimeout(() => speakWord(idx), 30);
+      }
+    });
+  });
+
+  // Pitch slider
+  elPitchSlider.addEventListener('input', () => {
+    elPitchLabel.textContent = getPitch().toFixed(1);
+    saveSettings();
+  });
+
+  // Progress bar click
+  $('#progress-bar').addEventListener('click', (e) => {
+    if (totalChars === 0) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const pct = (e.clientX - rect.left) / rect.width;
+    seekToChar(Math.round(pct * totalChars));
+  });
+
+  // Voice select
+  elVoiceSel.addEventListener('change', saveSettings);
+
+  // Auto-save draft
+  let draftSaveTimeout;
+  elTitle.addEventListener('input', () => {
+    clearTimeout(draftSaveTimeout);
+    draftSaveTimeout = setTimeout(saveDraft, 500);
+  });
+  elText.addEventListener('input', () => {
+    clearTimeout(draftSaveTimeout);
+    draftSaveTimeout = setTimeout(() => {
+      saveDraft();
+      resetWords();
+      updateProgressUI();
+      renderBookmarkDots();
+    }, 500);
+  });
+  elText.addEventListener('focus', () => clearHighlight());
 
   // Keyboard shortcuts
   document.addEventListener('keydown', (e) => {
-    // Don't capture when editing text
-    if (document.activeElement === elText || document.activeElement === elTitle) {
-      return;
-    }
+    if (document.activeElement === elText || document.activeElement === elTitle) return;
     switch (e.key) {
-      case ' ':
-        e.preventDefault();
-        if (isPlaying) pausePlayback(); else startPlayback();
-        break;
-      case 'ArrowLeft':
-        e.preventDefault();
-        elBtnRew.click();
-        break;
-      case 'ArrowRight':
-        e.preventDefault();
-        elBtnFwd.click();
-        break;
-      case 'Escape':
-        stopPlayback();
-        break;
+      case ' ': e.preventDefault(); if (isPlaying) pausePlayback(); else startPlayback(); break;
+      case 'ArrowLeft': e.preventDefault(); elBtnRew.click(); break;
+      case 'ArrowRight': e.preventDefault(); elBtnFwd.click(); break;
+      case 'Escape': stopPlayback(); break;
+      case 'b': e.preventDefault(); addBookmark(''); break;
     }
   });
 
-  // Voices load async on some browsers
+  // Modal overlay click
+  elModalOverlay.addEventListener('click', (e) => {
+    if (e.target === elModalOverlay) elModalOverlay.classList.remove('show');
+  });
+
+  // Bookmark panel outside click
+  document.addEventListener('click', (e) => {
+    if (!elBmPanel.contains(e.target) && e.target !== elBtnBookmark) {
+      elBmPanel.classList.remove('show');
+    }
+  });
+
+  // PWA install
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    window._pwaInstallEvent = e;
+    setTimeout(() => {
+      if (window._pwaInstallEvent) {
+        toast('点击顶部设置 → 安装到桌面');
+      }
+    }, 3000);
+  });
+
+  // Voices
   speechSynthesis.addEventListener('voiceschanged', populateVoices);
-  populateVoices(); // try immediate
+  populateVoices();
+
+  // Wake lock for background playback
+  let wakeLock = null;
+  async function requestWakeLock() {
+    try {
+      if ('wakeLock' in navigator) {
+        wakeLock = await navigator.wakeLock.request('screen');
+      }
+    } catch {}
+  }
+  elBtnPlay.addEventListener('click', requestWakeLock, { once: true });
 
   // Save draft on unload
   window.addEventListener('beforeunload', saveDraft);
@@ -1107,21 +1803,21 @@
   // ─── Init ────────────────────────────────────
   loadEpisodes();
   loadDraft();
+  loadSettings();
   renderEpisodeList();
-  resetChunks();
+  resetWords();
   updateProgressUI();
+  renderBookmarkDots();
   updatePlayButton();
+  if (!elText.textContent.trim() && episodes.length === 0) elText.focus();
 
-  // If no draft and no episodes, put cursor in editor
-  if (!elText.textContent.trim() && episodes.length === 0) {
-    elText.focus();
+  console.log('🎧 磨耳朵 · Podcast Reader v2 已就绪');
+  console.log('  功能：TTS朗读 | 字级高亮 | PDF/EPUB/URL导入 | 书签 | 定时关闭 | 连续播放 | AI语音 | 亮暗主题 | PWA');
+
+  // Register Service Worker for PWA
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
   }
-
-  console.log('🎧 磨耳朵 · Podcast Reader 已就绪');
-  console.log('  - 粘贴文字或拖入文件开始');
-  console.log('  - 空格键 播放/暂停');
-  console.log('  - 方向键 快进/快退');
-  console.log('  - Esc 停止');
 })();
 </script>
 </body>
