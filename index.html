@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>磨耳朵 · Podcast Reader</title>
+<style>
+  :root {
+    --bg: #0f0f14;
+    --surface: #1a1a24;
+    --surface2: #22222f;
+    --border: #2a2a3a;
+    --text: #e4e4ec;
+    --text-dim: #8888a0;
+    --accent: #f08060;
+    --accent-glow: rgba(240,128,96,0.3);
+    --play: #60d0a0;
+    --danger: #e0556a;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    --mono: "SF Mono", "Fira Code", "Cascadia Code", monospace;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { height:100%; }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  /* ── Top bar ── */
+  #topbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 20px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    z-index: 10;
+  }
+  #topbar .logo {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: var(--accent);
+    white-space: nowrap;
+  }
+  #topbar .logo span { color: var(--text-dim); font-weight: 400; }
+  #topbar .spacer { flex:1; }
+
+  .ctrl-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+  .ctrl-group select, .ctrl-group input[type=range] {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 5px 8px;
+    font-size: 13px;
+    outline: none;
+    cursor: pointer;
+  }
+  .ctrl-group select:focus { border-color: var(--accent); }
+  .ctrl-group input[type=range] {
+    -webkit-appearance: none;
+    height: 4px;
+    padding: 0;
+    background: var(--border);
+    width: 80px;
+  }
+  .ctrl-group input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+  }
+  #speed-label { min-width: 36px; text-align: center; font-variant-numeric: tabular-nums; font-family: var(--mono); }
+
+  /* ── Layout ── */
+  #main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* ── Sidebar ── */
+  #sidebar {
+    width: 260px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    transition: width 0.2s;
+  }
+  #sidebar.collapsed { width: 0; overflow: hidden; border:none; }
+  #sidebar-header {
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  #sidebar-header h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim); }
+  #sidebar-header button {
+    background: none; border: none; color: var(--text-dim);
+    cursor: pointer; font-size: 16px; padding: 2px 6px;
+  }
+  #sidebar-header button:hover { color: var(--text); }
+  #episode-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+  }
+  #episode-list::-webkit-scrollbar { width: 4px; }
+  #episode-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .ep-card {
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    margin-bottom: 4px;
+    transition: background 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .ep-card:hover { background: var(--surface2); }
+  .ep-card.active { background: var(--surface2); border-left: 3px solid var(--accent); }
+  .ep-card .ep-info { flex:1; min-width: 0; }
+  .ep-card .ep-title { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ep-card .ep-meta { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+  .ep-card .ep-del {
+    opacity: 0;
+    background: none; border: none; color: var(--danger);
+    cursor: pointer; font-size: 14px; padding: 2px 4px; border-radius: 4px;
+    transition: opacity 0.15s;
+  }
+  .ep-card:hover .ep-del { opacity: 1; }
+  .ep-card .ep-del:hover { background: rgba(224,85,106,0.15); }
+  #no-episodes {
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 13px;
+    padding: 30px 16px;
+    line-height: 1.6;
+  }
+
+  /* ── Editor / Player area ── */
+  #content-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+
+  #title-input {
+    width: 100%;
+    border: none;
+    background: transparent;
+    color: var(--text);
+    font-size: 22px;
+    font-weight: 600;
+    padding: 18px 28px 10px;
+    outline: none;
+    flex-shrink: 0;
+    font-family: var(--font);
+  }
+  #title-input::placeholder { color: var(--text-dim); }
+
+  #text-display {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px 28px 20px;
+    font-size: 17px;
+    line-height: 1.85;
+    letter-spacing: 0.01em;
+    position: relative;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  #text-display::-webkit-scrollbar { width: 6px; }
+  #text-display::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  #text-display[contenteditable="true"] {
+    cursor: text;
+    user-select: text;
+    -webkit-user-select: text;
+    outline: none;
+  }
+  #text-display[contenteditable="true"]:empty::before {
+    content: "在这里粘贴文字，或拖入 txt / md 文件…";
+    color: var(--text-dim);
+    pointer-events: none;
+  }
+  #text-display .hl {
+    background: var(--accent-glow);
+    border-radius: 3px;
+    padding: 1px 0;
+    transition: background 0.15s;
+  }
+  #text-display mark {
+    background: var(--accent);
+    color: #fff;
+    border-radius: 2px;
+    padding: 0 1px;
+  }
+
+  /* Drop overlay */
+  #drop-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(240,128,96,0.08);
+    border: 3px dashed var(--accent);
+    border-radius: var(--radius);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    color: var(--accent);
+    z-index: 20;
+    pointer-events: none;
+    margin: 20px;
+  }
+  #drop-overlay.show { display: flex; }
+
+  /* ── Player bar ── */
+  #player-bar {
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 10px 20px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  #progress-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  #progress-bar {
+    flex: 1;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+  }
+  #progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    width: 0%;
+    transition: width 0.1s linear;
+  }
+  #time-display {
+    font-size: 11px;
+    color: var(--text-dim);
+    font-variant-numeric: tabular-nums;
+    font-family: var(--mono);
+    min-width: 90px;
+    text-align: right;
+    white-space: nowrap;
+  }
+  #controls-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+  }
+  .btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-dim);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+  }
+  .btn:hover { color: var(--text); }
+  .btn:active { transform: scale(0.92); }
+  #btn-play {
+    width: 48px; height: 48px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 20px;
+  }
+  #btn-play:hover { background: #f09070; color: #fff; }
+  #btn-play.paused { /* default */ }
+  .btn-skip { font-size: 18px; width: 36px; height: 36px; }
+
+  #btn-save {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 6px 14px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    cursor: pointer;
+    font-family: var(--font);
+    transition: all 0.15s;
+  }
+  #btn-save:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Toast */
+  #toast {
+    position: fixed;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--surface2);
+    color: var(--text);
+    padding: 8px 20px;
+    border-radius: 20px;
+    font-size: 13px;
+    border: 1px solid var(--border);
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+    z-index: 100;
+  }
+  #toast.show { opacity: 1; }
+
+  /* Toggle sidebar */
+  #btn-toggle-sidebar {
+    background: none; border: none; color: var(--text-dim);
+    cursor: pointer; font-size: 18px; padding: 4px 8px;
+  }
+  #btn-toggle-sidebar:hover { color: var(--text); }
+
+  @media (max-width: 640px) {
+    #sidebar { width: 0; overflow: hidden; border: none; }
+    #sidebar.open { width: 260px; position: absolute; height: 100%; z-index: 30; }
+    #text-display { padding: 10px 16px 20px; font-size: 16px; }
+    #title-input { padding: 14px 16px 8px; font-size: 18px; }
+    #topbar { padding: 8px 12px; gap: 8px; }
+    #topbar .logo { font-size: 17px; }
+    .ctrl-group { font-size: 11px; }
+    .ctrl-group input[type=range] { width: 50px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div id="topbar">
+  <button id="btn-toggle-sidebar" title="侧边栏">&#9776;</button>
+  <div class="logo">磨耳朵<span> · Podcast Reader</span></div>
+  <div class="spacer"></div>
+  <div class="ctrl-group">
+    <label>语速</label>
+    <input type="range" id="speed-slider" min="0.5" max="2.5" step="0.05" value="1">
+    <span id="speed-label">1.0x</span>
+  </div>
+  <div class="ctrl-group">
+    <label>声音</label>
+    <select id="voice-select"></select>
+  </div>
+  <button id="btn-save" title="保存为播客集">保存</button>
+</div>
+
+<!-- Main layout -->
+<div id="main">
+
+  <!-- Sidebar - episodes -->
+  <div id="sidebar">
+    <div id="sidebar-header">
+      <h3>我的播客集</h3>
+      <button id="btn-new-ep" title="新建">+</button>
+    </div>
+    <div id="episode-list">
+      <div id="no-episodes">还没有保存的播客集<br>粘贴文字或拖入文件后点击「保存」</div>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div id="content-area">
+    <input type="text" id="title-input" placeholder="播客标题…">
+    <div id="text-display" contenteditable="true"></div>
+    <div id="drop-overlay">释放文件以导入</div>
+  </div>
+</div>
+
+<!-- Player bar -->
+<div id="player-bar">
+  <div id="progress-row">
+    <div id="progress-bar">
+      <div id="progress-fill"></div>
+    </div>
+    <div id="time-display">--:-- / --:--</div>
+  </div>
+  <div id="controls-row">
+    <button class="btn btn-skip" id="btn-rew" title="后退 15 秒">&#9664;&#9664;</button>
+    <button class="btn" id="btn-play" title="播放 / 暂停">&#9654;</button>
+    <button class="btn btn-skip" id="btn-fwd" title="前进 15 秒">&#9654;&#9654;</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+(function() {
+  'use strict';
+
+  // ─── DOM refs ────────────────────────────────
+  const $ = (s) => document.querySelector(s);
+  const $$ = (s) => document.querySelectorAll(s);
+
+  const elTitle      = $('#title-input');
+  const elText       = $('#text-display');
+  const elDropOverlay= $('#drop-overlay');
+  const elVoiceSel   = $('#voice-select');
+  const elSpeedSlider= $('#speed-slider');
+  const elSpeedLabel = $('#speed-label');
+  const elBtnPlay    = $('#btn-play');
+  const elBtnRew     = $('#btn-rew');
+  const elBtnFwd     = $('#btn-fwd');
+  const elBtnSave    = $('#btn-save');
+  const elBtnNew     = $('#btn-new-ep');
+  const elBtnToggle  = $('#btn-toggle-sidebar');
+  const elSidebar    = $('#sidebar');
+  const elEpList     = $('#episode-list');
+  const elNoEps      = $('#no-episodes');
+  const elProgressFill = $('#progress-fill');
+  const elTimeDisplay  = $('#time-display');
+  const elToast      = $('#toast');
+
+  // ─── State ───────────────────────────────────
+  let episodes     = [];
+  let currentEpId  = null;   // null = unsaved draft
+  let isPlaying    = false;
+  let chunks       = [];      // { text, charStart, charEnd }
+  let chunkIndex   = -1;
+  let charProgress = 0;       // chars spoken so far
+  let totalChars   = 0;
+  let currentUtterance = null;
+  let voices       = [];
+  let toastTimer   = null;
+
+  // ─── Settings ────────────────────────────────
+  function getSpeed()  { return parseFloat(elSpeedSlider.value); }
+  function getVoice()  { return voices.find(v => v.voiceURI === elVoiceSel.value) || null; }
+
+  // ─── Toast ───────────────────────────────────
+  function toast(msg) {
+    clearTimeout(toastTimer);
+    elToast.textContent = msg;
+    elToast.classList.add('show');
+    toastTimer = setTimeout(() => elToast.classList.remove('show'), 2000);
+  }
+
+  // ─── Episode management ─────────────────────
+  function loadEpisodes() {
+    try {
+      const raw = localStorage.getItem('podcast-reader-episodes');
+      episodes = raw ? JSON.parse(raw) : [];
+    } catch { episodes = []; }
+  }
+  function saveEpisodes() {
+    localStorage.setItem('podcast-reader-episodes', JSON.stringify(episodes));
+  }
+  function loadDraft() {
+    const draft = localStorage.getItem('podcast-reader-draft');
+    if (draft) {
+      try {
+        const d = JSON.parse(draft);
+        elTitle.value = d.title || '';
+        elText.textContent = d.content || '';
+        currentEpId = null;
+      } catch {}
+    }
+  }
+  function saveDraft() {
+    const draft = { title: elTitle.value, content: elText.textContent || '' };
+    localStorage.setItem('podcast-reader-draft', JSON.stringify(draft));
+  }
+  function loadSettings() {
+    try {
+      const s = JSON.parse(localStorage.getItem('podcast-reader-settings') || '{}');
+      if (s.speed)  elSpeedSlider.value = s.speed;
+      if (s.voice)  elVoiceSel.value = s.voice;
+      elSpeedLabel.textContent = parseFloat(elSpeedSlider.value).toFixed(1) + 'x';
+    } catch {}
+  }
+  function saveSettings() {
+    const s = { speed: getSpeed(), voice: elVoiceSel.value };
+    localStorage.setItem('podcast-reader-settings', JSON.stringify(s));
+  }
+
+  function findEpIndex(id) {
+    return episodes.findIndex(e => e.id === id);
+  }
+
+  function renderEpisodeList() {
+    elEpList.innerHTML = '';
+    if (episodes.length === 0) {
+      elEpList.innerHTML = '<div id="no-episodes">还没有保存的播客集<br>粘贴文字或拖入文件后点击「保存」</div>';
+      return;
+    }
+    episodes.forEach(ep => {
+      const card = document.createElement('div');
+      card.className = 'ep-card' + (ep.id === currentEpId ? ' active' : '');
+      card.innerHTML = `
+        <div class="ep-info">
+          <div class="ep-title">${escapeHtml(ep.title || '未命名')}</div>
+          <div class="ep-meta">${escapeHtml(ep.createdAt)} · ${charCount(ep.content)}</div>
+        </div>
+        <button class="ep-del" data-id="${ep.id}" title="删除">&times;</button>
+      `;
+      card.addEventListener('click', (e) => {
+        if (e.target.classList.contains('ep-del')) return;
+        loadEpisode(ep.id);
+      });
+      card.querySelector('.ep-del').addEventListener('click', (e) => {
+        e.stopPropagation();
+        deleteEpisode(ep.id);
+      });
+      elEpList.appendChild(card);
+    });
+  }
+
+  function loadEpisode(id) {
+    stopPlayback();
+    const ep = episodes.find(e => e.id === id);
+    if (!ep) return;
+    currentEpId = ep.id;
+    elTitle.value = ep.title || '';
+    elText.textContent = ep.content || '';
+    renderEpisodeList();
+    resetChunks();
+    updateProgressUI();
+    toast('已加载');
+  }
+
+  function saveCurrentEpisode() {
+    const content = elText.textContent || '';
+    const title = elTitle.value.trim() || '未命名';
+    if (!content.trim()) { toast('请先输入文字内容'); return; }
+
+    if (currentEpId !== null) {
+      const idx = findEpIndex(currentEpId);
+      if (idx >= 0) {
+        episodes[idx].title = title;
+        episodes[idx].content = content;
+        episodes[idx].updatedAt = new Date().toLocaleString('zh-CN');
+      }
+    } else {
+      const ep = {
+        id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+        title,
+        content,
+        createdAt: new Date().toLocaleString('zh-CN'),
+        updatedAt: new Date().toLocaleString('zh-CN'),
+      };
+      episodes.unshift(ep);
+      currentEpId = ep.id;
+    }
+    saveEpisodes();
+    renderEpisodeList();
+    saveDraft();
+    toast('已保存');
+  }
+
+  function deleteEpisode(id) {
+    if (!confirm('确定删除这个播客集？')) return;
+    stopPlayback();
+    episodes = episodes.filter(e => e.id !== id);
+    if (currentEpId === id) {
+      currentEpId = null;
+      elTitle.value = '';
+      elText.textContent = '';
+    }
+    saveEpisodes();
+    renderEpisodeList();
+    resetChunks();
+    updateProgressUI();
+    toast('已删除');
+  }
+
+  function newEpisode() {
+    stopPlayback();
+    currentEpId = null;
+    elTitle.value = '';
+    elText.textContent = '';
+    renderEpisodeList();
+    resetChunks();
+    updateProgressUI();
+    saveDraft();
+    elText.focus();
+  }
+
+  // ─── Helpers ─────────────────────────────────
+  function escapeHtml(s) {
+    const div = document.createElement('div');
+    div.textContent = s;
+    return div.innerHTML;
+  }
+  function charCount(s) {
+    const len = (s || '').replace(/\s/g, '').length;
+    if (len < 500) return len + ' 字';
+    if (len < 10000) return (len / 1000).toFixed(1) + 'k 字';
+    return (len / 10000).toFixed(1) + 'w 字';
+  }
+  function formatTime(seconds) {
+    if (!isFinite(seconds) || seconds < 0) return '--:--';
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+  }
+
+  // ─── Text chunking ───────────────────────────
+  function buildChunks(text) {
+    // Split text into sentences (Chinese + English punctuation)
+    const sentences = text.split(/(?<=[。！？\n\.!\?])/g).filter(s => s.trim());
+    if (sentences.length === 0) return [];
+
+    const result = [];
+    let pos = 0;
+    for (const s of sentences) {
+      const start = pos;
+      const end = pos + s.length;
+      result.push({ text: s, charStart: start, charEnd: end });
+      pos = end;
+    }
+    return result;
+  }
+
+  function resetChunks() {
+    const text = elText.textContent || '';
+    chunks = buildChunks(text);
+    chunkIndex = -1;
+    charProgress = 0;
+    totalChars = text.length;
+  }
+
+  // ─── Highlighting ────────────────────────────
+  function clearHighlight() {
+    const marks = elText.querySelectorAll('mark');
+    marks.forEach(m => {
+      const parent = m.parentNode;
+      parent.replaceChild(document.createTextNode(m.textContent), m);
+      parent.normalize();
+    });
+  }
+
+  function highlightChunk(index) {
+    clearHighlight();
+    if (index < 0 || index >= chunks.length) return;
+    const ch = chunks[index];
+    if (!ch || ch.charEnd <= ch.charStart) return;
+
+    // Use TreeWalker to find text nodes and mark the range
+    const walker = document.createTreeWalker(elText, NodeFilter.SHOW_TEXT, null, false);
+    let currentPos = 0;
+    const nodesToSplit = [];
+
+    while (walker.nextNode()) {
+      const node = walker.currentNode;
+      const len = node.textContent.length;
+      const nodeStart = currentPos;
+      const nodeEnd = currentPos + len;
+
+      if (nodeEnd > ch.charStart && nodeStart < ch.charEnd) {
+        nodesToSplit.push({ node, nodeStart, nodeEnd });
+      }
+      currentPos = nodeEnd;
+      if (currentPos >= ch.charEnd) break;
+    }
+
+    // Process nodes in reverse so offsets don't shift
+    for (let i = nodesToSplit.length - 1; i >= 0; i--) {
+      const { node, nodeStart, nodeEnd } = nodesToSplit[i];
+      const relStart = Math.max(0, ch.charStart - nodeStart);
+      const relEnd   = Math.min(nodeEnd - nodeStart, ch.charEnd - nodeStart);
+
+      const before = node.textContent.slice(0, relStart);
+      const middle = node.textContent.slice(relStart, relEnd);
+      const after  = node.textContent.slice(relEnd);
+
+      const frag = document.createDocumentFragment();
+      if (before) frag.appendChild(document.createTextNode(before));
+      const mark = document.createElement('mark');
+      mark.textContent = middle;
+      frag.appendChild(mark);
+      if (after) frag.appendChild(document.createTextNode(after));
+      node.parentNode.replaceChild(frag, node);
+    }
+
+    // Scroll to the highlight
+    const firstMark = elText.querySelector('mark');
+    if (firstMark) {
+      firstMark.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+
+  // ─── TTS Engine ──────────────────────────────
+  function populateVoices() {
+    voices = speechSynthesis.getVoices();
+    elVoiceSel.innerHTML = '';
+
+    // Prefer Chinese voices, then all
+    const zhVoices = voices.filter(v => v.lang.startsWith('zh'));
+    const otherVoices = voices.filter(v => !v.lang.startsWith('zh'));
+
+    const grouped = [
+      { label: '中文', voices: zhVoices },
+      { label: '其他语言', voices: otherVoices },
+    ];
+
+    for (const group of grouped) {
+      if (group.voices.length === 0) continue;
+      const optgroup = document.createElement('optgroup');
+      optgroup.label = group.label;
+      for (const v of group.voices) {
+        const opt = document.createElement('option');
+        opt.value = v.voiceURI;
+        opt.textContent = `${v.name} (${v.lang})`;
+        optgroup.appendChild(opt);
+      }
+      elVoiceSel.appendChild(optgroup);
+    }
+
+    // Restore saved voice
+    loadSettings();
+    if (!elVoiceSel.value && zhVoices.length > 0) {
+      elVoiceSel.value = zhVoices[0].voiceURI;
+    }
+  }
+
+  function speakChunk(index) {
+    if (index >= chunks.length) {
+      // Playback finished
+      stopPlayback();
+      toast('播放完毕');
+      updateProgressUI();
+      return;
+    }
+    if (!isPlaying && currentUtterance === null) return; // stopped
+
+    chunkIndex = index;
+    const ch = chunks[index];
+
+    const utter = new SpeechSynthesisUtterance(ch.text);
+    utter.voice = getVoice();
+    utter.rate = getSpeed();
+    utter.lang = utter.voice ? utter.voice.lang : 'zh-CN';
+
+    utter.onstart = () => {
+      charProgress = ch.charStart;
+      highlightChunk(index);
+      updateProgressUI();
+    };
+
+    utter.onboundary = (evt) => {
+      if (evt.charIndex !== undefined) {
+        charProgress = ch.charStart + evt.charIndex;
+        updateProgressUI();
+      }
+    };
+
+    utter.onend = () => {
+      charProgress = ch.charEnd;
+      updateProgressUI();
+      if (isPlaying) {
+        speakChunk(index + 1);
+      } else {
+        currentUtterance = null;
+      }
+    };
+
+    utter.onerror = (e) => {
+      if (e.error === 'canceled' || e.error === 'interrupted') {
+        currentUtterance = null;
+        return;
+      }
+      console.warn('TTS error:', e.error);
+      // Try next chunk on error
+      charProgress = ch.charEnd;
+      updateProgressUI();
+      if (isPlaying) {
+        setTimeout(() => speakChunk(index + 1), 100);
+      } else {
+        currentUtterance = null;
+      }
+    };
+
+    currentUtterance = utter;
+    speechSynthesis.speak(utter);
+  }
+
+  function startPlayback() {
+    if (isPlaying) return;
+    const text = elText.textContent || '';
+    if (!text.trim()) { toast('请先输入文字内容'); return; }
+
+    // If we were paused mid-chunk, resume
+    if (speechSynthesis.paused) {
+      speechSynthesis.resume();
+      isPlaying = true;
+      updatePlayButton();
+      return;
+    }
+
+    // Rebuild chunks if text has changed or no chunks yet
+    if (chunks.length === 0 || totalChars !== text.length) {
+      resetChunks();
+    }
+    if (chunks.length === 0) { toast('没有可朗读的内容'); return; }
+
+    // Find starting chunk based on current progress
+    let startIdx = 0;
+    if (charProgress > 0 && charProgress < totalChars) {
+      for (let i = 0; i < chunks.length; i++) {
+        if (chunks[i].charEnd > charProgress) {
+          startIdx = i;
+          break;
+        }
+      }
+      chunkIndex = startIdx;
+    }
+
+    isPlaying = true;
+    updatePlayButton();
+    speakChunk(startIdx);
+  }
+
+  function pausePlayback() {
+    isPlaying = false;
+    speechSynthesis.pause();
+    updatePlayButton();
+  }
+
+  function stopPlayback() {
+    isPlaying = false;
+    speechSynthesis.cancel();
+    currentUtterance = null;
+    updatePlayButton();
+    clearHighlight();
+  }
+
+  function seekByChars(deltaChars) {
+    if (chunks.length === 0) {
+      resetChunks();
+      if (chunks.length === 0) return;
+    }
+
+    const wasPlaying = isPlaying;
+    if (isPlaying) {
+      speechSynthesis.cancel();
+      currentUtterance = null;
+    }
+
+    charProgress = Math.max(0, Math.min(totalChars, charProgress + deltaChars));
+
+    // Find which chunk we land in
+    let newIdx = 0;
+    for (let i = 0; i < chunks.length; i++) {
+      if (chunks[i].charEnd > charProgress) {
+        newIdx = i;
+        break;
+      }
+      newIdx = i;
+    }
+    chunkIndex = newIdx;
+    updateProgressUI();
+    highlightChunk(newIdx);
+
+    if (wasPlaying) {
+      isPlaying = true;
+      setTimeout(() => speakChunk(newIdx), 50);
+    } else {
+      isPlaying = false;
+      updatePlayButton();
+    }
+  }
+
+  function updatePlayButton() {
+    if (isPlaying) {
+      elBtnPlay.innerHTML = '&#10074;&#10074;'; // pause symbol
+    } else {
+      elBtnPlay.innerHTML = '&#9654;'; // play triangle
+    }
+  }
+
+  function updateProgressUI() {
+    if (totalChars === 0) {
+      elProgressFill.style.width = '0%';
+      elTimeDisplay.textContent = '--:-- / --:--';
+      return;
+    }
+    const pct = Math.min(100, Math.round((charProgress / totalChars) * 100));
+    elProgressFill.style.width = pct + '%';
+
+    // Estimate time based on speech rate (~4 chars/sec for Chinese at 1x)
+    const rate = getSpeed();
+    const cps = 3.5 * rate; // chars per second estimate
+    const elapsed = totalChars > 0 ? charProgress / cps : 0;
+    const total   = totalChars > 0 ? totalChars / cps : 0;
+    elTimeDisplay.textContent = formatTime(elapsed) + ' / ' + formatTime(total);
+  }
+
+  // ─── Event handlers ──────────────────────────
+  elBtnPlay.addEventListener('click', () => {
+    if (isPlaying) {
+      pausePlayback();
+    } else {
+      startPlayback();
+    }
+  });
+
+  elBtnRew.addEventListener('click', () => {
+    // Rewind ~15 seconds worth of chars
+    const cps = 3.5 * getSpeed();
+    seekByChars(-Math.round(15 * cps));
+  });
+
+  elBtnFwd.addEventListener('click', () => {
+    const cps = 3.5 * getSpeed();
+    seekByChars(Math.round(15 * cps));
+  });
+
+  elBtnSave.addEventListener('click', saveCurrentEpisode);
+  elBtnNew.addEventListener('click', newEpisode);
+
+  elBtnToggle.addEventListener('click', () => {
+    elSidebar.classList.toggle('collapsed');
+  });
+
+  // Progress bar click
+  $('#progress-bar').addEventListener('click', (e) => {
+    if (totalChars === 0) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const pct = (e.clientX - rect.left) / rect.width;
+    const targetChar = Math.round(pct * totalChars);
+    const delta = targetChar - charProgress;
+    seekByChars(delta);
+  });
+
+  // Speed slider
+  elSpeedSlider.addEventListener('input', () => {
+    elSpeedLabel.textContent = getSpeed().toFixed(1) + 'x';
+    saveSettings();
+    // Update rate of current utterance if playing
+    if (currentUtterance && isPlaying) {
+      currentUtterance.rate = getSpeed();
+      // Need to re-speak for rate change to take effect on some browsers
+      if (!speechSynthesis.paused && !speechSynthesis.speaking) {
+        // Just started a new utterance
+      } else if (speechSynthesis.speaking && !speechSynthesis.paused) {
+        // Restart current chunk with new rate
+        const idx = chunkIndex;
+        speechSynthesis.cancel();
+        currentUtterance = null;
+        isPlaying = true;
+        setTimeout(() => speakChunk(idx), 30);
+      }
+    }
+  });
+
+  // Voice select
+  elVoiceSel.addEventListener('change', saveSettings);
+
+  // Auto-save draft on edits
+  let draftSaveTimeout;
+  elTitle.addEventListener('input', () => {
+    clearTimeout(draftSaveTimeout);
+    draftSaveTimeout = setTimeout(saveDraft, 500);
+  });
+  elText.addEventListener('input', () => {
+    clearTimeout(draftSaveTimeout);
+    draftSaveTimeout = setTimeout(() => {
+      saveDraft();
+      resetChunks();
+      updateProgressUI();
+    }, 500);
+  });
+  elText.addEventListener('focus', () => {
+    // Clear any lingering highlights when user wants to edit
+    clearHighlight();
+  });
+
+  // File drag & drop
+  document.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    elDropOverlay.classList.add('show');
+  });
+  document.addEventListener('dragleave', (e) => {
+    if (e.relatedTarget === null) elDropOverlay.classList.remove('show');
+  });
+  elDropOverlay.addEventListener('dragover', (e) => e.preventDefault());
+  elDropOverlay.addEventListener('drop', (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    elDropOverlay.classList.remove('show');
+    handleFiles(e.dataTransfer.files);
+  });
+
+  // Also listen on body for drops that miss the overlay
+  document.body.addEventListener('drop', (e) => {
+    // Only handle if not already handled by overlay
+    if (e.target === elDropOverlay || elDropOverlay.contains(e.target)) return;
+    e.preventDefault();
+    elDropOverlay.classList.remove('show');
+    if (e.dataTransfer && e.dataTransfer.files.length > 0) {
+      handleFiles(e.dataTransfer.files);
+    }
+  });
+  document.body.addEventListener('dragover', (e) => e.preventDefault());
+
+  // Paste handling for files
+  document.addEventListener('paste', (e) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.kind === 'file') {
+        e.preventDefault();
+        handleFiles([item.getAsFile()]);
+        return;
+      }
+    }
+  });
+
+  function handleFiles(files) {
+    const file = files[0];
+    if (!file) return;
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (!['txt', 'md', 'markdown', 'html', 'htm'].includes(ext)) {
+      toast('支持 txt、md、html 文件');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      let text = reader.result;
+      if (ext === 'html' || ext === 'htm') {
+        // Strip HTML tags
+        const div = document.createElement('div');
+        div.innerHTML = text;
+        text = div.textContent;
+      }
+      elText.textContent = text;
+      if (!elTitle.value.trim()) {
+        elTitle.value = file.name.replace(/\.[^.]+$/, ''); // use filename as title
+      }
+      stopPlayback();
+      currentEpId = null;
+      resetChunks();
+      updateProgressUI();
+      saveDraft();
+      toast('已导入：' + file.name);
+    };
+    reader.readAsText(file);
+  }
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', (e) => {
+    // Don't capture when editing text
+    if (document.activeElement === elText || document.activeElement === elTitle) {
+      return;
+    }
+    switch (e.key) {
+      case ' ':
+        e.preventDefault();
+        if (isPlaying) pausePlayback(); else startPlayback();
+        break;
+      case 'ArrowLeft':
+        e.preventDefault();
+        elBtnRew.click();
+        break;
+      case 'ArrowRight':
+        e.preventDefault();
+        elBtnFwd.click();
+        break;
+      case 'Escape':
+        stopPlayback();
+        break;
+    }
+  });
+
+  // Voices load async on some browsers
+  speechSynthesis.addEventListener('voiceschanged', populateVoices);
+  populateVoices(); // try immediate
+
+  // Save draft on unload
+  window.addEventListener('beforeunload', saveDraft);
+
+  // ─── Init ────────────────────────────────────
+  loadEpisodes();
+  loadDraft();
+  renderEpisodeList();
+  resetChunks();
+  updateProgressUI();
+  updatePlayButton();
+
+  // If no draft and no episodes, put cursor in editor
+  if (!elText.textContent.trim() && episodes.length === 0) {
+    elText.focus();
+  }
+
+  console.log('🎧 磨耳朵 · Podcast Reader 已就绪');
+  console.log('  - 粘贴文字或拖入文件开始');
+  console.log('  - 空格键 播放/暂停');
+  console.log('  - 方向键 快进/快退');
+  console.log('  - Esc 停止');
+})();
+</script>
+</body>
+</html>
