@@ -1,60 +1,99 @@
-# 磨耳朵 · Podcast Reader
+# 🎧 磨耳朵 · Podcast Reader
 
-把文字变成播客，像平时听播客一样磨耳朵。
+把文字变成播客 — 用 AI 语音朗读任何文字，像听播客一样「磨耳朵」。
 
 ## 功能
 
-- **TTS 朗读** — 基于浏览器 Web Speech API，免费无依赖
-- **字数级高亮** — 读到哪里亮到哪里，自动滚动跟随
-- **语速预设** — 一键切换 0.75x / 1x / 1.25x / 1.5x / 2x
-- **音调调节** — 调整朗读音高
-- **定时关闭** — 15/30/45/60 分钟自动停止，睡前必备
-- **连续播放** — 播完一集自动跳到下一集
-- **书签** — 随时标记位置，一键跳回
-- **PDF 导入** — 拖入 PDF 自动解析文字
-- **EPUB 导入** — 支持电子书格式
-- **网页导入** — 输入 URL 自动抓取正文
-- **AI 语音** — 可选接入 ElevenLabs / OpenAI TTS，音质接近真人
-- **亮色/暗色主题** — 一键切换
-- **PWA** — 可安装到桌面，离线可用，支持手机
-
-## 使用方法
-
-1. 用浏览器打开 `index.html`
-2. 粘贴文字，或拖入 `.txt` `.md` `.pdf` `.epub` 文件
-3. 点击播放按钮或按空格键开始朗读
-4. 顶部工具栏可调速、调音调、换声音、定时关闭
-
-## 快捷键
-
-| 按键 | 功能 |
-|---|---|
-| 空格 | 播放 / 暂停 |
-| ← → | 快退 / 快进 15 秒 |
-| b | 添加书签 |
-| Esc | 停止播放 |
-
-## AI 语音配置
-
-点击设置齿轮 → 选择 ElevenLabs 或 OpenAI TTS → 填入 API Key 即可。
-
-### ElevenLabs（推荐，中文效果好）
-1. 注册 [elevenlabs.io](https://elevenlabs.io) 获取 API Key
-2. 在 Voice Lab 中选择或克隆一个中文声音，复制 Voice ID
-3. 填入设置面板
-
-### OpenAI TTS
-1. 在 [platform.openai.com](https://platform.openai.com/api-keys) 创建 API Key
-2. 填入设置面板，选择声音即可
-
-## 部署
-
-纯静态文件，直接部署到任意静态服务：
-
-- **GitHub Pages** — Settings → Pages → 选 main 分支 root 目录
-- **Vercel / Netlify** — 拖入文件夹即可
-- **本地** — 双击 `index.html` 打开
+| 功能 | 状态 | 说明 |
+|------|------|------|
+| 🗣 **系统 TTS** | ✅ | Web Speech API，免费，离线可用 |
+| 🤖 **AI 语音** | ✅ | Edge TTS（免费）/ ElevenLabs / OpenAI |
+| 🆓 **Edge TTS** | ✅ | 微软免费语音，每月 50 万字符，无需 API Key |
+| 📄 **多格式导入** | ✅ | PDF、EPUB、图片 OCR、TXT、Markdown |
+| 🌐 **网页抓取** | ✅ | URL 抓取正文、RSS 订阅 |
+| 🔖 **书签 & 批注** | ✅ | 随时标记，进度条可视化 |
+| 📻 **MP3 导出** | ✅ | AI TTS 模式下导出音频文件 |
+| 🎯 **聚焦 & 卡拉OK** | ✅ | 专注阅读、大字跟读 |
+| 🌙 **暗色/浅色主题** | ✅ | 自动切换 |
+| ⏱ **定时关闭** | ✅ | 睡前自动停止 |
+| 📊 **使用统计** | ✅ | 已听字数、时长、次数 |
+| 📱 **PWA** | ✅ | 可安装到桌面，离线可用 |
+| 🔔 **锁屏控制** | ✅ | Media Session API，通知栏播放/暂停 |
+| 📤 **分享导入** | ✅ | 从任意 App 分享文本/文件到磨耳朵 |
+| 🔄 **数据同步** | ✅ | JSON 导入/导出备份 |
 
 ## 技术栈
 
-纯前端 · Web Speech API · pdf.js · JSZip · PWA
+- **纯前端** — Vanilla JavaScript，无需后端
+- **PWA** — Service Worker 离线缓存 + Media Session + Share Target
+- **Web Speech API** — 系统自带 TTS
+- **Edge TTS** — 微软免费神经语音（WebSocket，无需 API Key）
+- **AI TTS** — ElevenLabs Multilingual v2 / OpenAI TTS-1
+- **PDF** — pdf.js
+- **EPUB** — JSZip
+- **OCR** — Tesseract.js (中文 + 英文)
+
+## 快速开始
+
+```bash
+git clone https://github.com/quejiang/podcast-reader.git
+cd podcast-reader
+python3 -m http.server 8080
+```
+
+打开 `http://localhost:8080` 即可使用。
+
+## 部署
+
+详细教程见 **[DEPLOY.md](./DEPLOY.md)**，包含：
+- 四种平台部署教程（Cloudflare Pages / Vercel / GitHub Pages / Netlify）
+- **📱 各系统手机安装教程**（iPhone / Android / 华为 / 小米 / OPPO…）
+- 自定义域名、AI 语音配置、排错指南
+
+| 平台 | 难度 | 免费额度 |
+|------|------|----------|
+| **Cloudflare Pages**（推荐） | ⭐ | 无限 |
+| **Vercel** | ⭐ | 100 GB/月 |
+| **GitHub Pages** | ⭐ | 100 GB/月 |
+| **Netlify** | ⭐ | 100 GB/月 |
+
+## AI 语音配置
+
+| 引擎 | 费用 | 音质 | 后台播放 | API Key |
+|------|------|------|----------|---------|
+| **Edge TTS**（推荐） | 免费 50 万字符/月 | ⭐⭐⭐⭐ | ✅ | 不需要 |
+| ElevenLabs | 免费 ~1 万字符/月 | ⭐⭐⭐⭐⭐ | ✅ | 需要 |
+| OpenAI TTS | 按量付费 | ⭐⭐⭐⭐⭐ | ✅ | 需要 |
+
+设置路径：点击右上角 ⚙ → **AI 语音** → 选择引擎 → 保存。
+
+## 项目结构
+
+```
+podcast-reader/
+├── index.html            # 入口 HTML
+├── manifest.json         # PWA 配置（含 Share Target）
+├── sw.js                 # Service Worker
+├── _headers              # Cloudflare 缓存规则（可选）
+├── css/style.css         # 样式
+├── js/
+│   ├── state.js          # 全局状态 & 工具函数
+│   ├── storage.js        # localStorage 读写
+│   ├── highlight.js      # 字级高亮引擎
+│   ├── bookmarks.js      # 书签系统
+│   ├── annotations.js    # 批注系统
+│   ├── tts.js            # Web Speech TTS
+│   ├── edge-tts.js       # Edge TTS（免费微软语音）
+│   ├── ai-tts.js         # AI TTS + MP3 导出
+│   ├── player.js         # 播放控制 + Media Session
+│   ├── import.js         # 文件导入 (PDF/EPUB/OCR/RSS)
+│   ├── analytics.js      # 埋点 (Umami, 可选)
+│   ├── ui.js             # UI 模式 & 设置面板
+│   ├── tutorial.js       # 新手引导
+│   └── app.js            # 事件绑定 & 初始化
+└── DEPLOY.md             # 部署教程
+```
+
+## License
+
+MIT

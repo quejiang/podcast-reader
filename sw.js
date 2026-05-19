@@ -1,8 +1,23 @@
-const CACHE = 'podcast-reader-v1';
+const CACHE = 'podcast-reader-v3';
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
+  './css/style.css',
+  './js/state.js',
+  './js/storage.js',
+  './js/highlight.js',
+  './js/bookmarks.js',
+  './js/annotations.js',
+  './js/tts.js',
+  './js/edge-tts.js',
+  './js/ai-tts.js',
+  './js/player.js',
+  './js/import.js',
+  './js/analytics.js',
+  './js/ui.js',
+  './js/tutorial.js',
+  './js/app.js'
 ];
 
 self.addEventListener('install', (e) => {
@@ -21,12 +36,46 @@ self.addEventListener('activate', (e) => {
   self.clients.claim();
 });
 
+// 处理 Share Target POST 请求
 self.addEventListener('fetch', (e) => {
-  if (e.request.method !== 'GET') return;
-  // Don't cache API calls
   const url = new URL(e.request.url);
-  if (url.pathname.includes('/v1/')) return;
 
+  // Share Target: 接收分享的文件/文本
+  if (e.request.method === 'POST' && url.pathname.endsWith('/') && url.searchParams.get('action') === 'shared') {
+    e.respondWith(
+      (async function() {
+        // 将 POST 数据暂存，重定向到首页由 app.js 读取
+        const formData = await e.request.formData();
+        const client = await self.clients.get(e.resultingClientId || (await self.clients.matchAll({ type: 'window' }))[0]?.id);
+        if (client) {
+          const shared = {};
+          shared.text = formData.get('text') || '';
+          shared.title = formData.get('title') || '';
+          const file = formData.get('file');
+          if (file && file.size) {
+            const buf = await file.arrayBuffer();
+            shared.fileName = file.name;
+            shared.fileType = file.type;
+            shared.fileSize = file.size;
+            // 将文件内容暂存到 cache storage
+            const shareCache = await caches.open('share-target');
+            await shareCache.put('shared-file', new Response(buf, { headers: { 'Content-Type': file.type, 'X-File-Name': encodeURIComponent(file.name) } }));
+            shared.hasFile = true;
+          }
+          client.postMessage({ type: 'share-target', data: shared });
+        }
+        return Response.redirect('./?action=shared', 303);
+      })()
+    );
+    return;
+  }
+
+  if (e.request.method !== 'GET') return;
+
+  // 不缓存 API 调用
+  if (url.pathname.includes('/v1/') || url.pathname.includes('/consumer/speech/')) return;
+
+  // Cache-first, network-update
   e.respondWith(
     caches.match(e.request).then((cached) => {
       const fetched = fetch(e.request).then((resp) => {
@@ -39,4 +88,21 @@ self.addEventListener('fetch', (e) => {
       return cached || fetched;
     })
   );
+});
+
+// 监听 app.js 发来的 share file 请求
+self.addEventListener('message', async (evt) => {
+  if (evt.data && evt.data.type === 'get-shared-file') {
+    const cache = await caches.open('share-target');
+    const resp = await cache.match('shared-file');
+    if (resp) {
+      const blob = await resp.blob();
+      const name = decodeURIComponent(resp.headers.get('X-File-Name') || 'shared-file');
+      const file = new File([blob], name, { type: resp.headers.get('Content-Type') || 'application/octet-stream' });
+      evt.ports[0].postMessage({ file: file });
+      await cache.delete('shared-file');
+    } else {
+      evt.ports[0].postMessage({ file: null });
+    }
+  }
 });
