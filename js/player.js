@@ -176,6 +176,8 @@
     PR.updateProgressUI();
     PR.renderBookmarkDots();
     PR.renderAnnotationMarks();
+    // Auto-close sidebar on mobile
+    if (window.innerWidth <= 700) PR.elSidebar.classList.add('collapsed');
     PR.toast('已加载');
   };
 

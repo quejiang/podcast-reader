@@ -24,6 +24,8 @@
   PR.elBtnKaraoke = PR.$('#btn-karaoke');
   PR.elBtnSmartSpeed = PR.$('#btn-smart-speed');
   PR.elBtnExportMp3 = PR.$('#btn-export-mp3');
+  PR.elBtnImportFile = PR.$('#btn-import-file');
+  PR.elFileInput = PR.$('#file-input');
   PR.elSleepBadge = PR.$('#sleep-badge');
   PR.elSidebar = PR.$('#sidebar');
   PR.elEpList = PR.$('#episode-list');
@@ -59,6 +61,10 @@
     PR.elSidebar.classList.toggle('collapsed');
   });
 
+  PR.$('#btn-close-sidebar').addEventListener('click', function() {
+    PR.elSidebar.classList.add('collapsed');
+  });
+
   PR.elBtnMode.addEventListener('click', function() {
     document.body.classList.toggle('light');
     PR.saveSettings();
@@ -91,6 +97,14 @@
   });
 
   PR.elBtnExportMp3.addEventListener('click', PR.exportMp3);
+
+  PR.elBtnImportFile.addEventListener('click', function() { PR.elFileInput.click(); });
+  PR.elFileInput.addEventListener('change', function() {
+    if (PR.elFileInput.files.length) {
+      PR.handleFile(PR.elFileInput.files[0]);
+      PR.elFileInput.value = '';
+    }
+  });
 
   PR.elBtnAutoNext.addEventListener('click', function() {
     PR.autoNext = !PR.autoNext;

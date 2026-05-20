@@ -42,9 +42,9 @@
     var speakText = w.text;
     var speakEnd = w.charEnd;
     var j = index + 1;
-    // Group short consecutive words
+    // Group consecutive short words for smoother TTS
     while (j < PR.words.length &&
-      (PR.words[j].text.match(/^[\u4e00-\u9fff]+$/) ? PR.words[j].text.length <= 2 : PR.words[j].text.length <= 3) &&
+      (PR.words[j].text.match(/^[\u4e00-\u9fff]+$/) ? PR.words[j].text.length <= 5 : PR.words[j].text.length <= 5) &&
       j - index < 4) {
       speakText += PR.words[j].text;
       speakEnd = PR.words[j].charEnd;

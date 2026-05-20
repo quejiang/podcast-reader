@@ -34,8 +34,10 @@
   <button class="btn-icon" id="btn-features" title="功能全览">&#9733;</button>
   <button class="btn-icon" id="btn-mode" title="浅色/暗色">&#9788;</button>
   <button class="btn-icon" id="btn-settings" title="设置">&#9881;</button>
+  <button class="btn-icon" id="btn-import-file" title="导入文件">&#128193;</button>
   <button class="btn-icon" id="btn-save" title="保存" style="color:var(--accent);">&#128190;</button>
 </div>
+<input type="file" id="file-input" accept=".txt,.md,.csv,.json,.pdf,.epub,.png,.jpg,.jpeg,.gif,.bmp,.webp" style="display:none">
 
 <div id="main">
   <div id="sidebar" class="collapsed">
@@ -43,6 +45,7 @@
       <h3>播客集</h3>
       <button id="btn-new-ep" title="新建">+</button>
       <button id="btn-auto-next" title="连续播放">&#128257;</button>
+      <button id="btn-close-sidebar" title="返回">&#10005;</button>
     </div>
     <div id="episode-list"><div id="no-episodes">还没有保存的播客集<br>粘贴文字或拖入文件后点击「保存」</div></div>
   </div>

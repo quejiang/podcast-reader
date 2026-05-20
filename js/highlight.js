@@ -12,9 +12,9 @@
     while ((m = re.exec(text)) !== null) {
       var t = m[1];
       if (!t) continue;
-      if (/^[\u4e00-\u9fff\u3400-\u4dbf]+$/.test(t) && t.length > 3) {
-        for (var i = 0; i < t.length; i += 2) {
-          var sub = t.slice(i, Math.min(i + 3, t.length));
+      if (/^[\u4e00-\u9fff\u3400-\u4dbf]+$/.test(t) && t.length > 8) {
+        for (var i = 0; i < t.length; i += 5) {
+          var sub = t.slice(i, Math.min(i + 8, t.length));
           result.push({ text: sub, charStart: m.index + i, charEnd: m.index + i + sub.length });
         }
       } else {
