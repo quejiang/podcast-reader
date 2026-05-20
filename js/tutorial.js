@@ -125,15 +125,19 @@
             '&#8226; <kbd>&#9889; 紧凑模式</kbd> — 去掉朗读间停顿，更高效<br>' +
             '&#8226; <kbd>&#9201; 定时关闭</kbd> — 睡前设 15/30/60 分钟自动停<br>' +
             '&#8226; <kbd>&#9788; 主题切换</kbd> — 暗色/浅色一键切换<br>' +
-            '&#8226; <kbd>&#9733; 功能全览</kbd> — 随时查看所有功能<br>' +
-            '&#8226; <kbd>MP3 导出</kbd> — AI 模式下导出音频文件' :
+            '&#8226; <kbd>&#127991; 标签</kbd> — 为播客集添加分类标签<br>' +
+            '&#8226; <kbd>&#9733; 功能全览</kbd> — 随时查看所有功能' :
             '<strong>更多功能：</strong><br><br>' +
             '&#8226; <kbd>&#9878; 聚焦模式</kbd> (F) — 只高亮当前段落<br>' +
             '&#8226; <kbd>&#9655; 卡拉OK</kbd> (K) — 当前行居中大字<br>' +
             '&#8226; <kbd>&#9889; 紧凑模式</kbd> — 去掉朗读间停顿<br>' +
             '&#8226; <kbd>&#9201; 定时关闭</kbd> — 睡前自动停<br>' +
             '&#8226; <kbd>&#9788; 主题切换</kbd> — 暗色/浅色<br>' +
-            '&#8226; <kbd>MP3 导出</kbd> — AI 模式下导出音频',
+            '<br><strong>⚙ 更多在设置里：</strong><br>' +
+            '&#8226; <kbd>显示</kbd> — 字号 / 行高 / 边距 / 字体<br>' +
+            '&#8226; <kbd>词典</kbd> — 自定义发音替换规则<br>' +
+            '&#8226; <kbd>同步</kbd> — WebDAV 云端备份<br>' +
+            '&#8226; <kbd>导入</kbd> — RSS / URL / Google Drive',
           tip: { el: '#btn-smart-speed', msg: '👆 点击探索更多功能', pos: 'top' }
         },
         {
@@ -141,15 +145,17 @@
           title: '第7步：AI 语音（可选）',
           body: isTouchDevice ?
             '<strong>想听更自然的人声？</strong><br><br>' +
-            '点 <kbd>&#9881; 设置</kbd> → AI 语音 → 选择引擎：<br><br>' +
+            '点 <kbd>&#9881; 设置</kbd> 有 7 个标签页：<br><br>' +
+            '&#8226; <strong>AI 语音</strong> 标签 — 切换 TTS 引擎<br>' +
+            '&#8226; <strong>显示</strong> 标签 — 字号 / 行高 / 字体<br>' +
+            '&#8226; <strong>词典</strong> 标签 — 自定义发音<br><br>' +
             '&#8226; <strong>Edge TTS</strong>（推荐⭐）— 免费，26种中文音色<br>' +
-            '&#8226; ElevenLabs — 顶级音质，接近真人<br>' +
-            '&#8226; OpenAI TTS — 按量付费，质量高<br><br>' +
-            '<strong>Edge TTS 无需 API Key</strong>，每月免费 50 万字符，支持后台锁屏播放。<br><br>' +
+            '&#8226; ElevenLabs / OpenAI TTS — 高级音质<br><br>' +
+            '<strong>Edge TTS 无需 API Key</strong>，每月免费 50 万字符，支持后台锁屏播放。<br>' +
             '<small style="color:var(--text-dim)">💡 选 Edge TTS 后就能锁屏听了！</small>' :
             '<strong>想听更自然的人声？</strong><br><br>' +
-            '点 <kbd>&#9881; 设置</kbd> → AI 语音 → 选择引擎：<br><br>' +
-            '&#8226; <strong>Edge TTS</strong>（推荐⭐）— 免费，26种中文音色<br>' +
+            '点 <kbd>&#9881; 设置</kbd> 有 7 个标签页：AI 语音、显示、词典、导入、同步、统计、关于。<br><br>' +
+            '&#8226; <strong>Edge TTS</strong>（推荐⭐）— 免费，26种中文音色，锁屏播放<br>' +
             '&#8226; ElevenLabs / OpenAI TTS — 高级音质<br><br>' +
             'Edge TTS 无需 API Key，每月免费 50 万字符。',
           tip: { el: '#btn-settings', msg: '👆 点击设置配置 AI 语音引擎', pos: 'bottom' }

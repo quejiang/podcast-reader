@@ -116,6 +116,7 @@
   PR.elBtnBookmark.addEventListener('click', function() {
     if (!PR.totalChars) return;
     var l = prompt('书签备注：');
+    if (l === null) return; // user cancelled
     PR.addBookmark(l || '');
     PR.showBookmarkPanel();
   });

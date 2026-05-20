@@ -42,6 +42,9 @@
     throw new Error('未配置 AI 引擎');
   };
 
+  // Speak a chunk of words in AI mode.
+  // Uses PR._chunkSeq (incremented by startPlayback and seekByChars) to discard
+  // stale callbacks when the user seeks or stops during fetch.
   PR.speakAiChunk = function(index) {
     if (index >= PR.words.length) {
       PR.stopPlayback();
@@ -51,6 +54,10 @@
       return;
     }
     if (!PR.isPlaying) return;
+
+    // Capture the sequence ID at the moment this chunk was dispatched.
+    // Any callback whose seq !== this seq is stale and must be ignored.
+    var seq = PR._chunkSeq || 0;
 
     PR.wordIndex = index;
     var w = PR.words[index];
@@ -71,18 +78,25 @@
     var wib = j - index;
 
     PR.fetchAiAudio(batchText).then(function(blob) {
+      // Guard: discard if playback stopped, started a new session, or sought away
       if (!PR.isPlaying) return;
+      if (PR._chunkSeq !== seq) return;
+
+      // Limit memory: keep at most 30 blobs
       PR.aiAudioBlobs.push(blob);
+      if (PR.aiAudioBlobs.length > 30) {
+        PR.aiAudioBlobs = PR.aiAudioBlobs.slice(-30);
+      }
+
       var url = URL.createObjectURL(blob);
       PR.aiAudio = new Audio(url);
       PR.aiAudio.playbackRate = PR.getSpeed();
 
-      // Use timeupdate for accurate word sync
-      var totalDuration = 0; // will be set once audio duration is known
+      var totalDuration = 0;
       PR.aiAudio.addEventListener('timeupdate', function() {
-        if (!PR.isPlaying || !PR.aiAudio || PR.aiAudio.paused) return;
+        if (!PR.isPlaying || !PR.aiAudio || PR._chunkSeq !== seq) return;
+        if (PR.aiAudio.paused) return;
         var currentTime = PR.aiAudio.currentTime;
-        // Estimate total duration (may not be available immediately)
         if (!isFinite(totalDuration) || totalDuration <= 0) {
           totalDuration = PR.aiAudio.duration;
           if (!isFinite(totalDuration) || totalDuration <= 0) {
@@ -103,23 +117,35 @@
 
       PR.aiAudio.onended = function() {
         URL.revokeObjectURL(url);
+        if (PR._chunkSeq !== seq) return;
         PR.charProgress = batchEnd;
         PR.updateProgressUI();
         if (PR.isPlaying) {
           var d = PR.smartSpeed ? 20 : 150;
-          setTimeout(function() { PR.speakAiChunk(index + wib); }, d);
+          setTimeout(function() {
+            if (PR._chunkSeq !== seq) return;
+            PR.speakAiChunk(index + wib);
+          }, d);
         }
       };
 
       PR.aiAudio.onerror = function() {
         URL.revokeObjectURL(url);
+        if (PR._chunkSeq !== seq) return;
         PR.charProgress = batchEnd;
         PR.updateProgressUI();
-        if (PR.isPlaying) setTimeout(function() { PR.speakAiChunk(index + wib); }, 200);
+        if (PR.isPlaying) {
+          setTimeout(function() {
+            if (PR._chunkSeq !== seq) return;
+            PR.speakAiChunk(index + wib);
+          }, 200);
+        }
       };
 
       PR.aiAudio.play().catch(function() {});
     }).catch(function(err) {
+      // Guard: ignore if started a new session
+      if (PR._chunkSeq !== seq) return;
       PR.toast('AI TTS 失败：' + err.message, 3000);
       PR.aiMode = null;
       PR.isPlaying = false;

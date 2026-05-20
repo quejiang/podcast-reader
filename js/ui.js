@@ -26,13 +26,17 @@
       }).join('') +
       '<button class="secondary" style="margin-top:6px;width:100%;" id="btn-close-modal">取消</button>';
     PR.elModalOverlay.classList.add('show');
-    PR.elModal.querySelectorAll('button[data-m]').forEach(function(b) {
+    PR.elModal.querySelectorAll('button[data-m]').forEach(function(b, i) {
+      b.setAttribute('tabindex', '0');
       b.addEventListener('click', function() {
         PR.setSleepTimer(parseInt(b.dataset.m) * 60);
         PR.elModalOverlay.classList.remove('show');
       });
+      if (i === 0) setTimeout(function() { b.focus(); }, 100);
     });
-    PR.$('#btn-close-modal').addEventListener('click', function() { PR.elModalOverlay.classList.remove('show'); });
+    var btnClose = PR.$('#btn-close-modal');
+    if (btnClose) { btnClose.setAttribute('tabindex', '0'); }
+    btnClose.addEventListener('click', function() { PR.elModalOverlay.classList.remove('show'); });
   };
 
   PR.setSleepTimer = function(sec) {
@@ -224,7 +228,8 @@
 
     PR.elModal.innerHTML = html;
     PR.elModalOverlay.classList.add('show');
-    PR.$('#btn-close-modal').addEventListener('click', function() { PR.elModalOverlay.classList.remove('show'); });
+    var closeBtn = PR.$('#btn-close-modal');
+    if (closeBtn) { closeBtn.addEventListener('click', function() { PR.elModalOverlay.classList.remove('show'); }); setTimeout(function() { closeBtn.focus(); }, 50); }
   };
 
   // ---- Settings Modal ----
@@ -259,13 +264,13 @@
 
     PR.elModal.innerHTML =
       '<div class="tabs">' +
-        '<span class="tab-btn active" data-tab="ai">AI 语音</span>' +
-        '<span class="tab-btn" data-tab="display">显示</span>' +
-        '<span class="tab-btn" data-tab="pron">词典</span>' +
-        '<span class="tab-btn" data-tab="import">导入</span>' +
-        '<span class="tab-btn" data-tab="sync">同步</span>' +
-        '<span class="tab-btn" data-tab="stats">统计</span>' +
-        '<span class="tab-btn" data-tab="about">关于</span>' +
+        '<span class="tab-btn active" data-tab="ai" tabindex="0">AI 语音</span>' +
+        '<span class="tab-btn" data-tab="display" tabindex="0">显示</span>' +
+        '<span class="tab-btn" data-tab="pron" tabindex="0">词典</span>' +
+        '<span class="tab-btn" data-tab="import" tabindex="0">导入</span>' +
+        '<span class="tab-btn" data-tab="sync" tabindex="0">同步</span>' +
+        '<span class="tab-btn" data-tab="stats" tabindex="0">统计</span>' +
+        '<span class="tab-btn" data-tab="about" tabindex="0">关于</span>' +
       '</div>' +
 
       // ---- AI Tab ----
@@ -412,7 +417,15 @@
         var t = PR.$('#tab-' + b.dataset.tab);
         if (t) t.style.display = 'block';
       });
+      b.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); b.click(); }
+      });
     });
+    // Focus the active tab on open
+    setTimeout(function() {
+      var active = PR.elModal.querySelector('.tab-btn.active');
+      if (active) active.focus();
+    }, 50);
 
     // ---- AI fields toggle ----
     var cAiMode = PR.$('#cfg-ai-mode');
@@ -978,7 +991,7 @@
         '<button class="secondary" id="btn-close-modal" style="width:100%;margin-top:12px">关闭</button>';
       PR.elModalOverlay.classList.add('show');
       var btnClose = PR.$('#btn-close-modal');
-      if (btnClose) btnClose.addEventListener('click', function() { PR.elModalOverlay.classList.remove('show'); });
+      if (btnClose) { btnClose.addEventListener('click', function() { PR.elModalOverlay.classList.remove('show'); }); setTimeout(function() { btnClose.focus(); }, 50); }
       console.log('[install] modal shown');
     } else {
       var plainText = title + '\n\n' + lines.filter(function(l) { return l; }).join('\n');

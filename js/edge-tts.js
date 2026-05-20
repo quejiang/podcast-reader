@@ -6,10 +6,8 @@
     cachedVoices: null,
     ws: null,
     audioEl: null,
-    msConv: null,
-    onEnd: null,
-    onError: null,
-    onBlock: null
+    _api: null,       // last synthesize() return value for stopPlayback
+    _cleanup: null    // cleanup function for current session
   };
 
   // Default fallback voice list (used before async fetch completes)
@@ -32,7 +30,7 @@
   // Fetch available Edge voices (cached)
   PR.edgeTTS.fetchVoices = function(cb) {
     if (PR.edgeTTS.cachedVoices) {
-      cb(PR.edgeTTS.cachedVoices);
+      if (cb) cb(PR.edgeTTS.cachedVoices);
       return;
     }
     var url = 'https://speech.platform.bing.com/consumer/speech/synthesize/readaloud/voices/list?trustedclienttoken=6A5AA1D4EAFF4E9FB37E23D68491D6F4';
@@ -47,13 +45,34 @@
           };
         });
         PR.edgeVoices = PR.edgeTTS.cachedVoices;
-        cb(PR.edgeTTS.cachedVoices);
+        if (cb) cb(PR.edgeTTS.cachedVoices);
       })
       .catch(function() {
-        PR.edgeTTS.cachedVoices = [];
-        PR.edgeVoices = [];
-        cb([]);
+        // Restore fallback list - don't set to empty
+        PR.edgeTTS.cachedVoices = PR.edgeVoices.slice();
+        if (cb) cb(PR.edgeTTS.cachedVoices);
       });
+  };
+
+  // ---- Shared pronunciation dictionary core logic ----
+  // Returns an array of {marker, start, end} to be applied by caller
+  PR._buildPronReplacements = function(text) {
+    if (!PR.pronDict || !Object.keys(PR.pronDict).length) return [];
+    var entries = Object.keys(PR.pronDict);
+    entries.sort(function(a, b) { return b.length - a.length; });
+    var reps = [];
+    for (var i = 0; i < entries.length; i++) {
+      var word = entries[i];
+      var pron = PR.pronDict[word];
+      if (!pron) continue;
+      var escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      var re = new RegExp(escaped, 'g');
+      var m;
+      while ((m = re.exec(text)) !== null) {
+        reps.push({ marker: word, replace: pron, start: m.index, end: m.index + word.length });
+      }
+    }
+    return reps;
   };
 
   // Apply pronunciation dictionary as SSML substitutions
@@ -73,26 +92,49 @@
     return result;
   };
 
+  // synthesize options: { onEnd, onBlock, onError, autoPlay (default true) }
   PR.edgeTTS.synthesize = function(text, voiceName, rate, opts) {
     opts = opts || {};
+    var autoPlay = opts.autoPlay !== false;
     if (!window.MediaSource) {
       if (opts.onError) opts.onError(new Error('浏览器不支持 MediaSource'));
       return null;
     }
     var ms = new MediaSource();
     var audio = new Audio();
-    audio.src = URL.createObjectURL(ms);
+    var blobUrl = URL.createObjectURL(ms);
+    audio.src = blobUrl;
     var sourceBuffer = null;
     var queue = [];
     var ended = false;
-    var firstChunk = true;
+
+    var cleanup = function() {
+      // Clean up event listeners by nulling callbacks
+      ws.onopen = null; ws.onmessage = null; ws.onerror = null; ws.onclose = null;
+      audio.onended = null; audio.onerror = null;
+      if (sourceBuffer) {
+        sourceBuffer.onupdateend = null;
+        sourceBuffer.onerror = null;
+      }
+      ms.onsourceopen = null;
+      // Revoke blob URL
+      try { URL.revokeObjectURL(blobUrl); } catch(e) {}
+      // Close WebSocket
+      try {
+        if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) ws.close();
+      } catch(e) {}
+      // Stop audio
+      try { audio.pause(); audio.src = ''; } catch(e) {}
+      // Clear shared refs if this is still the active session
+      if (PR.edgeTTS.ws === ws) { PR.edgeTTS.ws = null; PR.edgeTTS.audioEl = null; }
+      if (PR.edgeTTS._api === api) { PR.edgeTTS._api = null; }
+      clearTimeout(timeoutId);
+    };
 
     var flushQueue = function() {
       if (!sourceBuffer || sourceBuffer.updating || !queue.length) return;
       var buf = queue.shift();
-      try {
-        sourceBuffer.appendBuffer(buf);
-      } catch(e) {
+      try { sourceBuffer.appendBuffer(buf); } catch(e) {
         if (opts.onError) opts.onError(e);
       }
     };
@@ -120,7 +162,6 @@
       });
       if (matched && matched.edgeName) voiceEdgeName = matched.edgeName;
     }
-    // Also check fallback list
     if (voiceEdgeName === voiceName && PR.edgeVoices) {
       var fm = PR.edgeVoices.find(function(v) { return v.id === voiceName; });
       if (fm && fm.id) voiceEdgeName = fm.id;
@@ -128,10 +169,22 @@
 
     var wsUrl = 'wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=6A5AA1D4EAFF4E9FB37E23D68491D6F4&ConnectionId=' + Date.now();
     var ws = new WebSocket(wsUrl);
-    PR.edgeTTS.ws = ws;
-    PR.edgeTTS.audioEl = audio;
+
+    // WebSocket timeout — 10 seconds
+    var timeoutId = setTimeout(function() {
+      if (ws.readyState !== WebSocket.OPEN) {
+        try { ws.close(); } catch(e) {}
+        if (opts.onError) opts.onError(new Error('Edge TTS 连接超时，请检查网络'));
+      }
+    }, 10000);
+
+    if (autoPlay) {
+      PR.edgeTTS.ws = ws;
+      PR.edgeTTS.audioEl = audio;
+    }
 
     ws.addEventListener('open', function() {
+      clearTimeout(timeoutId);
       var ssmlText = PR.edgeTTS._applyPronDictSSML(text);
       var ssml = 'X-RequestId:' + Date.now() + '\r\nContent-Type:application/ssml+xml\r\nX-Timestamp:' + new Date().toISOString() + '\r\nPath:ssml\r\n\r\n' +
         '<speak xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xmlns:emo="http://www.w3.org/2009/10/emotionml" version="1.0" xml:lang="zh-CN">' +
@@ -158,7 +211,6 @@
         var reader = new FileReader();
         reader.onload = function() {
           var arr = new Uint8Array(reader.result);
-          // Strip header: "Path:audio\r\n"
           var headerEnd = -1;
           for (var i = 0; i < arr.length - 1; i++) {
             if (arr[i] === 13 && arr[i+1] === 10 && headerEnd >= 0) { headerEnd = i + 2; break; }
@@ -175,6 +227,7 @@
     });
 
     ws.addEventListener('error', function(err) {
+      clearTimeout(timeoutId);
       if (opts.onError) opts.onError(err);
     });
 
@@ -187,7 +240,10 @@
     audio.addEventListener('ended', function() {
       PR.edgeTTS.ws = null;
       PR.edgeTTS.audioEl = null;
+      if (PR.edgeTTS._api === api) PR.edgeTTS._api = null;
       if (!ended && opts.onEnd) opts.onEnd();
+      // Cleanup after playback ends naturally
+      cleanup();
     });
 
     audio.addEventListener('error', function(err) {
@@ -198,14 +254,24 @@
       pause: function() { audio.pause(); },
       resume: function() { audio.play(); },
       stop: function() {
-        if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) ws.close();
-        audio.pause();
+        cleanupEnd();
         if (opts.onEnd) opts.onEnd();
       },
-      getAudio: function() { return audio; }
+      getAudio: function() { return audio; },
+      cleanup: cleanup
     };
 
-    setTimeout(function() { audio.play().catch(function() {}); }, 100);
+    var cleanupEnd = function() {
+      ended = true;
+      cleanup();
+    };
+
+    PR.edgeTTS._api = api;
+    PR.edgeTTS._cleanup = cleanup;
+
+    if (autoPlay) {
+      setTimeout(function() { audio.play().catch(function() {}); }, 100);
+    }
     return api;
   };
 
@@ -213,7 +279,8 @@
   PR.edgeTTS.speakChunk = function(text, voice, rate, onEnd, onBlock) {
     return PR.edgeTTS.synthesize(text, voice, rate, {
       onEnd: onEnd,
-      onBlock: onBlock
+      onBlock: onBlock,
+      autoPlay: true
     });
   };
 
@@ -226,12 +293,12 @@
       var rate = PR.getSpeed();
 
       PR.edgeTTS.synthesize(text, voice, rate, {
+        autoPlay: false,  // Don't auto-play; we'll play the Blob ourselves
         onBlock: function(data) {
           chunks.push(new Uint8Array(data));
         },
         onEnd: function() {
           if (chunks.length === 0) {
-            // Empty audio — create minimal silent blob
             resolve(new Blob([], { type: 'audio/mpeg' }));
           } else {
             var totalLen = 0;
@@ -251,5 +318,8 @@
       });
     });
   };
+
+  // ---- Start fetching the full voice list on load ----
+  PR.edgeTTS.fetchVoices();
 
 })(window.PR);

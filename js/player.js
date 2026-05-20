@@ -68,6 +68,7 @@
     PR.aiMode = cfg.mode || null;
     if (PR.aiMode) {
       PR.aiAudioBlobs = [];
+      PR._chunkSeq = (PR._chunkSeq || 0) + 1; // increment sequence to invalidate stale chunks
       PR._setupMediaSession();
       if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
       PR.speakAiChunk(si);
@@ -81,6 +82,7 @@
   PR.pausePlayback = function() {
     PR.isPlaying = false;
     speechSynthesis.pause();
+    if (PR.aiAudio) PR.aiAudio.pause();
     PR.updatePlayButton();
   };
 
@@ -88,9 +90,29 @@
     PR.isPlaying = false;
     speechSynthesis.cancel();
     PR.currentUtterance = null;
+
+    // Stop Edge TTS WebSocket properly
+    if (PR.edgeTTS._api) { PR.edgeTTS._api.stop(); PR.edgeTTS._api = null; }
+    if (PR.edgeTTS.ws) {
+      try {
+        if (PR.edgeTTS.ws.readyState === WebSocket.OPEN || PR.edgeTTS.ws.readyState === WebSocket.CONNECTING)
+          PR.edgeTTS.ws.close();
+      } catch(e) {}
+      PR.edgeTTS.ws = null;
+    }
+    if (PR.edgeTTS.audioEl) { PR.edgeTTS.audioEl.pause(); PR.edgeTTS.audioEl = null; }
+
     if (PR.aiAudio) { PR.aiAudio.pause(); PR.aiAudio = null; }
     if ('mediaSession' in navigator) { navigator.mediaSession.playbackState = 'none'; navigator.mediaSession.metadata = null; }
-    PR.aiAudioBlobs = [];
+    if (PR._sleepTimer) { clearTimeout(PR._sleepTimer); PR._sleepTimer = null; PR.elSleepBadge.style.display = 'none'; }
+    if (PR._sleepRemaining) { clearInterval(PR._sleepRemaining); PR._sleepRemaining = null; }
+
+    // Limit memory: keep only last 20 chunks
+    if (PR.aiAudioBlobs && PR.aiAudioBlobs.length > 20) {
+      PR.aiAudioBlobs = PR.aiAudioBlobs.slice(-20);
+    }
+    // Don't clear blobs on stop so export still works; user clears by starting new playback
+
     PR.updatePlayButton();
     PR.clearHighlight();
     PR.renderAnnotationMarks();
@@ -103,7 +125,13 @@
   PR.seekByChars = function(dc) {
     if (!PR.words.length) { PR.resetWords(); if (!PR.words.length) return; }
     var wp = PR.isPlaying;
-    if (PR.isPlaying) { speechSynthesis.cancel(); PR.currentUtterance = null; }
+    if (PR.isPlaying) {
+      speechSynthesis.cancel();
+      PR.currentUtterance = null;
+      // Stop Edge TTS if active
+      if (PR.edgeTTS._api) { PR.edgeTTS._api.stop(); PR.edgeTTS._api = null; }
+      if (PR.aiAudio) { PR.aiAudio.pause(); PR.aiAudio = null; }
+    }
     PR.charProgress = Math.max(0, Math.min(PR.totalChars, PR.charProgress + dc));
     var ni = 0;
     for (var i = 0; i < PR.words.length; i++) {
@@ -116,7 +144,10 @@
     if (PR.words[ni]) PR.highlightWordRange(PR.words[ni].charStart, PR.words[ni].charEnd);
     if (wp) {
       PR.isPlaying = true;
+      // Invalidate any stale AI chunk
+      PR._chunkSeq = (PR._chunkSeq || 0) + 1;
       setTimeout(function() {
+        if (!PR.isPlaying) return;
         PR.aiMode ? PR.speakAiChunk(ni) : PR.speakWord(ni);
       }, 50);
     } else {
