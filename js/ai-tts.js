@@ -48,6 +48,7 @@
   PR.speakAiChunk = function(index) {
     if (index >= PR.words.length) {
       PR.stopPlayback();
+      PR._saveResumePoint();
       PR.toast('播放完毕');
       PR.updateStats();
       if (PR.autoNext) setTimeout(PR.playNextEpisode, 500);

@@ -46,6 +46,8 @@ PR.version = '3.5';
     fontFamily: 'default',
     autoScroll: true
   };
+  PR.theme = 'dark';           // 'dark' | 'light' | 'auto'
+  PR.keybindings = {};         // will be populated from defaults in storage.js
 
   // ---- DOM references (populated by app.js) ----
   // Will be set by app.js init to avoid coupling
@@ -87,10 +89,31 @@ PR.version = '3.5';
     if (rs.lineHeight) PR.elText.style.lineHeight = rs.lineHeight;
     if (rs.padding !== undefined) PR.elText.style.padding = '4px ' + rs.padding + 'px 16px';
     if (rs.fontFamily && rs.fontFamily !== 'default') {
+      PR.loadFont(rs.fontFamily);
       PR.elText.style.fontFamily = rs.fontFamily + ', var(--font)';
     } else {
       PR.elText.style.fontFamily = '';
     }
+  };
+
+  // ---- Dynamic font loader (loads Google Fonts on demand for privacy) ----
+  PR._loadedFonts = {};
+  PR.loadFont = function(fontFamily) {
+    if (PR._loadedFonts[fontFamily]) return;
+    PR._loadedFonts[fontFamily] = true;
+    // Only load from Google Fonts for fonts that need it
+    var googleParams = {
+      "'LXGW WenKai'": 'LXGW+WenKai:ital,wght@0,300;0,400;0,700;1,400',
+      "'Noto Sans SC'": 'Noto+Sans+SC:ital,wght@0,400;0,700;1,400',
+      "'Noto Serif SC'": 'Noto+Serif+SC:ital,wght@0,400;0,700;1,400',
+      "'OpenDyslexic'": 'OpenDyslexic'
+    };
+    var param = googleParams[fontFamily];
+    if (!param) return; // System font or locally-installed font, nothing to load
+    var link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'https://fonts.googleapis.com/css2?family=' + param + '&display=swap';
+    document.head.appendChild(link);
   };
 
   // ---- Loading overlay helpers ----

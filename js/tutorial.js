@@ -467,10 +467,13 @@
     }
 
     function loadDemoContent() {
-      var demoText = '人工智能正在深刻改变我们的生活方式。从智能手机上的语音助手，到自动驾驶汽车，再到医疗诊断中的影像分析，AI 已经渗透到了社会的方方面面。\n\n在语音技术领域，文本转语音（TTS）系统已经从早期的机械式发音，发展到了今天几乎可以以假乱真的自然语音合成。现代 TTS 不仅能准确读出文字，还能根据上下文调整语调、语速和情感表达。\n\n深度学习模型的突破是这一进步的关键。通过在海量语音数据上训练，AI 学会了人类说话时的微妙变化——什么时候停顿、什么时候重读、什么时候加快或放慢。\n\n对于学习语言的人来说，这意味着一场革命。你不再需要找人朗读给你听，也不需要反复听同一段录音。只需要把文字投喂给 AI，它就能像一位耐心的朗读者一样，用自然的语调为你读出每一个字。\n\n这就是"磨耳朵"的意义所在——通过反复聆听，让耳朵逐渐适应目标语言的节奏和语调。就像婴儿学说话一样，听多了，自然就会了。\n\n无论是准备雅思听力考试，还是想提高英语语感，或是单纯想用碎片时间多吸收一些信息，文字转语音都是你的得力助手。\n\n打开一本书，粘贴一段文字，点击播放，闭上眼静静听。知识就这样流进了耳朵里。';
+      var isZh = PR.locale === 'zh-CN';
+      var demoText = isZh ?
+        '人工智能正在深刻改变我们的生活方式。从智能手机上的语音助手，到自动驾驶汽车，再到医疗诊断中的影像分析，AI 已经渗透到了社会的方方面面。\n\n在语音技术领域，文本转语音（TTS）系统已经从早期的机械式发音，发展到了今天几乎可以以假乱真的自然语音合成。现代 TTS 不仅能准确读出文字，还能根据上下文调整语调、语速和情感表达。\n\n深度学习模型的突破是这一进步的关键。通过在海量语音数据上训练，AI 学会了人类说话时的微妙变化——什么时候停顿、什么时候重读、什么时候加快或放慢。\n\n对于学习语言的人来说，这意味着一场革命。你不再需要找人朗读给你听，也不需要反复听同一段录音。只需要把文字投喂给 AI，它就能像一位耐心的朗读者一样，用自然的语调为你读出每一个字。\n\n这就是"磨耳朵"的意义所在——通过反复聆听，让耳朵逐渐适应目标语言的节奏和语调。就像婴儿学说话一样，听多了，自然就会了。\n\n无论是准备雅思听力考试，还是想提高英语语感，或是单纯想用碎片时间多吸收一些信息，文字转语音都是你的得力助手。\n\n打开一本书，粘贴一段文字，点击播放，闭上眼静静听。知识就这样流进了耳朵里。' :
+        'Artificial intelligence is profoundly reshaping the way we live. From voice assistants on our smartphones, to self-driving cars, to medical imaging diagnostics, AI has permeated every corner of society.\n\nIn the realm of speech technology, text-to-speech systems have evolved from early robotic-sounding voices into remarkably natural speech synthesis indistinguishable from human speech. Modern TTS not only reads text accurately, but also adjusts intonation, pacing, and emotional expression based on context.\n\nThe breakthrough of deep learning models is key to this progress. By training on vast amounts of speech data, AI has learned the subtle nuances of human speech — when to pause, when to emphasize, when to speed up or slow down.\n\nFor language learners, this represents a revolution. You no longer need to find someone to read aloud for you, nor listen to the same recording over and over. Simply feed text to the AI, and it becomes a patient narrator, reading every word aloud with natural intonation.\n\nThis is the essence of podcast reading — through repeated listening, let your ears gradually adapt to the rhythm and tone of the target language. Much like how babies learn to speak, the more you listen, the more naturally it comes.\n\nWhether you are preparing for an English listening exam, improving your sense of the language, or simply making the most of your spare moments to absorb more information, text-to-speech is your indispensable companion.\n\nOpen a book, paste a passage, press play, close your eyes, and listen. Knowledge flows straight into your ears.';
 
       PR.elText.textContent = demoText;
-      PR.elTitle.value = 'AI 与语音技术 · 演示播客';
+      PR.elTitle.value = isZh ? 'AI 与语音技术 · 演示播客' : 'AI & Speech Tech · Demo Podcast';
       PR.resetWords();
       PR.updateProgressUI();
       PR.saveDraft();
@@ -484,7 +487,7 @@
         PR.updateProgressUI();
         PR.saveDraft();
       });
-      PR.toast('已加载演示内容，点击 ▶ 播放试试吧');
+      PR.toast(isZh ? '已加载演示内容，点击 ▶ 播放试试吧' : 'Demo content loaded. Press ▶ to try it out!');
 
       var check = function() {
         if (PR.isPlaying) {

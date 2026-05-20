@@ -26,6 +26,15 @@
     if (ext === 'txt' || ext === 'md' || ext === 'csv' || ext === 'json') {
       var text = await file.text();
       PR.setText(text, name);
+    } else if (ext === 'srt' || ext === 'vtt') {
+      PR.toast('正在解析字幕…', 3000);
+      try {
+        var raw = await file.text();
+        var subtitles = PR.parseSubtitles(raw, ext);
+        PR.setText(subtitles, name);
+      } catch(e) {
+        PR.toast('字幕解析失败: ' + e.message, 3000);
+      }
     } else if (ext === 'pdf') {
       PR.toast('正在解析 PDF…', 60000);
       try {
@@ -188,6 +197,32 @@
         return;
       }
     }
+  };
+
+  // SRT / VTT subtitle parser
+  PR.parseSubtitles = function(raw, ext) {
+    var lines = raw.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+    var texts = [];
+    var inText = false;
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i].trim();
+      // Skip WEBVTT header
+      if (i === 0 && ext === 'vtt' && line.toUpperCase() === 'WEBVTT') continue;
+      // Skip VTT header metadata
+      if (ext === 'vtt' && line === '' && !inText && i > 0 && texts.length === 0) continue;
+      // Skip index numbers (SRT) or timestamp lines
+      if (/^\d+$/.test(line) && !inText) continue;
+      if (line.includes('-->')) continue;
+      if (line === '') {
+        inText = false;
+        continue;
+      }
+      inText = true;
+      // Strip VTT tags like <c>, <v>, </c>, etc.
+      line = line.replace(/<[^>]+>/g, '');
+      if (line) texts.push(line);
+    }
+    return texts.join('\n');
   };
 
   // Handle drop event

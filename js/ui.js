@@ -269,6 +269,7 @@
         '<span class="tab-btn" data-tab="pron" tabindex="0">词典</span>' +
         '<span class="tab-btn" data-tab="import" tabindex="0">导入</span>' +
         '<span class="tab-btn" data-tab="sync" tabindex="0">同步</span>' +
+        '<span class="tab-btn" data-tab="keys" tabindex="0">快捷键</span>' +
         '<span class="tab-btn" data-tab="stats" tabindex="0">统计</span>' +
         '<span class="tab-btn" data-tab="about" tabindex="0">关于</span>' +
       '</div>' +
@@ -370,6 +371,35 @@
         '<p style="font-size:11px;color:var(--text-dim);margin-bottom:6px">拖到书签栏，任意网页点击即朗读</p>' +
         '<textarea readonly style="height:50px;font-size:10px;font-family:var(--mono);word-break:break-all">javascript:(function(){var t=document.body.innerText.replace(/\\\\n{3,}/g,\'\\\\n\\\\n\').trim();var u=\'https://quejiang.github.io/podcast-reader/?text=\'+encodeURIComponent(t)+\'&title=\'+encodeURIComponent(document.title);window.open(u,\'_blank\')})()</textarea>' +
       '</div>' +
+
+      // ---- Keybindings Tab ----
+      (function() {
+        var kb = PR.keybindings || {};
+        var bindings = [
+          { id: 'playPause', label: '播放/暂停' },
+          { id: 'rewind', label: '后退 15 秒' },
+          { id: 'forward', label: '前进 15 秒' },
+          { id: 'bookmark', label: '添加书签' },
+          { id: 'focus', label: '聚焦模式' },
+          { id: 'karaoke', label: '卡拉OK 模式' },
+          { id: 'help', label: '帮助教程' },
+          { id: 'stop', label: '停止播放' },
+          { id: 'abStart', label: 'A-B 循环起点' },
+          { id: 'abEnd', label: 'A-B 循环终点' },
+          { id: 'abClear', label: '取消 A-B 循环' }
+        ];
+        var rows = bindings.map(function(b) {
+          return '<div class="stat-row" style="justify-content:space-between;cursor:pointer" data-bind="' + b.id + '" tabindex="0">' +
+            '<span>' + b.label + '</span>' +
+            '<strong class="kb-key" data-bind="' + b.id + '" style="background:var(--surface2);padding:2px 8px;border-radius:4px;font-family:var(--mono);font-size:12px">' +
+            PR.esc(kb[b.id] || '') + '</strong></div>';
+        }).join('');
+        return '<div id="tab-keys" style="display:none">' +
+          '<p style="color:var(--text-dim);font-size:11px;margin-bottom:8px">点击任意快捷键 → 按下新按键 → 确认修改</p>' +
+          rows +
+          '<button id="btn-reset-keys" class="secondary" style="margin-top:10px;width:100%">恢复默认快捷键</button>' +
+        '</div>';
+      })() +
 
       // ---- Stats Tab ----
       '<div id="tab-stats" style="display:none">' +
@@ -491,8 +521,12 @@
     var ffSel = PR.$('#cfg-font-family');
     if (ffSel) {
       ffSel.addEventListener('change', function() {
-        if (ffSel.value !== 'default') PR.elText.style.fontFamily = ffSel.value + ', var(--font)';
-        else PR.elText.style.fontFamily = '';
+        if (ffSel.value !== 'default') {
+          PR.loadFont(ffSel.value);
+          PR.elText.style.fontFamily = ffSel.value + ', var(--font)';
+        } else {
+          PR.elText.style.fontFamily = '';
+        }
       });
     }
 
@@ -602,6 +636,72 @@
 
     var btnWDDownload = PR.$('#btn-webdav-download');
     if (btnWDDownload) btnWDDownload.addEventListener('click', function() { doWebDAV('GET'); });
+
+    // ---- Keybinding editor ----
+    var _kbCapturing = null;
+    PR.elModal.querySelectorAll('[data-bind]').forEach(function(row) {
+      row.addEventListener('click', function() {
+        var bindId = row.dataset.bind;
+        if (_kbCapturing === bindId) return;
+        _kbCapturing = bindId;
+        var keyEl = PR.elModal.querySelector('.kb-key[data-bind="' + bindId + '"]');
+        if (keyEl) { keyEl.textContent = '按下按键…'; keyEl.style.color = 'var(--accent)'; }
+        PR.toast('请按下快捷键…', 3000);
+      });
+    });
+    var keyCaptureHandler = function(e) {
+      if (!_kbCapturing) return;
+      if (e.key === 'Escape' || e.key === 'Backspace' || e.key === 'Delete') {
+        PR.keybindings[_kbCapturing] = '';
+        var kEl = PR.elModal.querySelector('.kb-key[data-bind="' + _kbCapturing + '"]');
+        if (kEl) { kEl.textContent = '—'; kEl.style.color = ''; }
+        _kbCapturing = null;
+        e.preventDefault();
+        return;
+      }
+      if (e.key.length === 1 || e.key.startsWith('Arrow') || e.key === 'Space' || e.key === 'Escape' || e.key === 'Backspace') {
+        var keyName = e.key === ' ' ? 'Space' : e.key;
+        PR.keybindings[_kbCapturing] = keyName;
+        var kkEl = PR.elModal.querySelector('.kb-key[data-bind="' + _kbCapturing + '"]');
+        if (kkEl) { kkEl.textContent = keyName; kkEl.style.color = ''; }
+        _kbCapturing = null;
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+    document.addEventListener('keydown', keyCaptureHandler, true);
+    // Cleanup on modal close
+    var _origModalClose = function() { PR.elModalOverlay.classList.remove('show'); };
+    PR.elModalOverlay._cleanupCb = function() {
+      document.removeEventListener('keydown', keyCaptureHandler, true);
+      _kbCapturing = null;
+    };
+
+    // Wrap the close button to cleanup
+    var btnCloseModal = PR.$('#btn-close-modal');
+    if (btnCloseModal) {
+      var _origCloseClick = btnCloseModal.click;
+      btnCloseModal.addEventListener('click', function() {
+        if (PR.elModalOverlay._cleanupCb) PR.elModalOverlay._cleanupCb();
+      });
+    }
+    // Also cleanup on overlay click
+    PR.elModalOverlay.addEventListener('click', function(e) {
+      if (e.target === PR.elModalOverlay && PR.elModalOverlay._cleanupCb) PR.elModalOverlay._cleanupCb();
+    });
+
+    var btnResetKeys = PR.$('#btn-reset-keys');
+    if (btnResetKeys) {
+      btnResetKeys.addEventListener('click', function() {
+        var defaults = { playPause: ' ', rewind: 'ArrowLeft', forward: 'ArrowRight',
+          bookmark: 'b', focus: 'f', karaoke: 'k', help: 'h', stop: 'Escape',
+          abStart: '[', abEnd: ']', abClear: '\\' };
+        PR.keybindings = defaults;
+        PR.elModalOverlay.classList.remove('show');
+        PR.showSettings();
+        PR.toast('快捷键已恢复默认', 2000);
+      });
+    }
 
     // ---- Save config ----
     PR.$('#btn-save-cfg').addEventListener('click', function() {

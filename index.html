@@ -4,6 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#0f0f14">
+<meta http-equiv="Content-Security-Policy" content="
+  default-src 'self';
+  script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net;
+  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+  font-src 'self' https://fonts.gstatic.com;
+  connect-src 'self' https: wss: blob:;
+  img-src 'self' data: blob:;
+  worker-src 'self' blob: https://cdn.jsdelivr.net;
+  media-src 'self' blob:;
+  form-action 'self';
+  base-uri 'self';
+">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="磨耳朵">
@@ -12,8 +24,6 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="manifest" href="manifest.json">
 <link rel="stylesheet" href="css/style.css?v=3.5">
-<link rel="preload" href="https://fonts.googleapis.com/css2?family=LXGW+WenKai:ital,wght@0,300;0,400;0,700;1,400&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
-<link rel="preload" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:ital,wght@0,400;0,700;1,400&family=Noto+Serif+SC:ital,wght@0,400;0,700;1,400&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
 <title>磨耳朵 · Podcast Reader</title>
 </head>
 <body>
@@ -53,6 +63,7 @@
       <button id="btn-sort-ep" aria-label="排序方式" title="排序">&#128260;</button>
       <button id="btn-tag-ep" aria-label="编辑标签" title="标签">&#127991;</button>
       <button id="btn-auto-next" aria-label="连续播放" title="连续播放">&#128257;</button>
+      <button id="btn-play-all" aria-label="全部播放" title="全部播放" style="font-size:13px">&#9654;全部</button>
       <button id="btn-close-sidebar" aria-label="关闭侧边栏" title="返回">&#10005;</button>
     </div>
     <div id="ep-search-wrap" style="padding:6px 8px">
@@ -105,9 +116,12 @@
 <div id="ann-toolbar" role="tooltip" aria-label="批注工具栏">添加批注</div>
 
 <!-- CDN dependencies (must load before app modules) -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"
+  integrity="sha384-/1qUCSGwTur9vjf/z9lmu/eCUYbpOTgSjmpbMQZ1/CtX2v/WcAIKqRv+U1DUCG6e" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"
+  integrity="sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"
+  integrity="sha384-GJqSu7vueQ9qN0E9yLPb3Wtpd7OrgK8KmYzC8T1IysG1bcvxvIO4qtYR/D3A991F" crossorigin="anonymous"></script>
 
 <!-- App modules (load order matters — new modules added) -->
 <script src="js/state.js?v=3.5"></script>

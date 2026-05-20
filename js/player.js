@@ -63,6 +63,7 @@
     PR.updatePlayButton();
     PR.stats.sessionCount++;
     PR.saveSettings();
+    PR._clearResumePoint();
 
     var cfg = PR.loadAiConfig();
     PR.aiMode = cfg.mode || null;
@@ -106,6 +107,9 @@
     if ('mediaSession' in navigator) { navigator.mediaSession.playbackState = 'none'; navigator.mediaSession.metadata = null; }
     if (PR._sleepTimer) { clearTimeout(PR._sleepTimer); PR._sleepTimer = null; PR.elSleepBadge.style.display = 'none'; }
     if (PR._sleepRemaining) { clearInterval(PR._sleepRemaining); PR._sleepRemaining = null; }
+
+    // Save resume point
+    if (PR.totalChars && PR.charProgress > 0) PR._saveResumePoint();
 
     // Limit memory: keep only last 20 chunks
     if (PR.aiAudioBlobs && PR.aiAudioBlobs.length > 20) {
@@ -248,6 +252,21 @@
     }
   };
 
+  // Save resume point for next session (auto-resume)
+  PR._saveResumePoint = function() {
+    if (!PR.totalChars || PR.charProgress === 0) return;
+    localStorage.setItem('pr-resume', JSON.stringify({
+      epId: PR.currentEpId,
+      charProgress: PR.charProgress,
+      title: PR.elTitle ? PR.elTitle.value.trim() : '',
+      text: PR.elText ? (PR.elText.textContent || '').slice(0, 200) : ''
+    }));
+  };
+
+  PR._clearResumePoint = function() {
+    localStorage.removeItem('pr-resume');
+  };
+
   PR.loadEpisode = function(id) {
     PR.stopPlayback();
     var ep = PR.episodes.find(function(e) { return e.id === id; });
@@ -360,6 +379,28 @@
     PR.loadEpisode(PR.episodes[idx + 1].id);
     setTimeout(PR.startPlayback, 200);
     PR.toast('自动播放下一集');
+  };
+
+  // Play all episodes in sequence starting from the first (or sorted) episode
+  PR.playAll = function() {
+    if (!PR.episodes.length) { PR.toast('没有可播放的播客集'); return; }
+    // Use current sort order
+    var filtered = PR.episodes.slice();
+    var sortBy = PR._epSort || 'newest';
+    if (sortBy === 'alpha') {
+      filtered.sort(function(a, b) { return (a.title || '').localeCompare(b.title || '', 'zh'); });
+    } else if (sortBy === 'progress') {
+      filtered.sort(function(a, b) { return (b.progress || 0) - (a.progress || 0); });
+    }
+    var first = filtered[0];
+    if (!PR.autoNext) {
+      PR.autoNext = true;
+      PR.elBtnAutoNext.classList.add('active');
+      PR.saveSettings();
+    }
+    PR.loadEpisode(first.id);
+    setTimeout(PR.startPlayback, 300);
+    PR.toast('全部播放 · 共 ' + filtered.length + ' 集');
   };
 
   // ---- Episode tags ----

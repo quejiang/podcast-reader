@@ -16,7 +16,19 @@
         PR.autoNext = s.autoNext;
         PR.elBtnAutoNext.classList.toggle('active', PR.autoNext);
       }
-      if (s.theme === 'light') document.body.classList.add('light');
+      // Theme: dark / light / auto
+      PR.theme = s.theme || 'dark';
+      if (s.theme === 'light') {
+        document.body.classList.add('light');
+      } else if (s.theme === 'auto') {
+        if (window.matchMedia('(prefers-color-scheme: light)').matches) document.body.classList.add('light');
+      }
+      if (s.keybindings) PR.keybindings = s.keybindings;
+      if (!PR.keybindings || Object.keys(PR.keybindings).length === 0) {
+        PR.keybindings = { playPause: ' ', rewind: 'ArrowLeft', forward: 'ArrowRight',
+          bookmark: 'b', focus: 'f', karaoke: 'k', help: 'h', stop: 'Escape',
+          abStart: '[', abEnd: ']', abClear: '\\' };
+      }
       if (s.smartSpeed !== undefined) {
         PR.smartSpeed = s.smartSpeed;
         PR.elBtnSmartSpeed.classList.toggle('active', PR.smartSpeed);
@@ -38,7 +50,8 @@
       rate: PR.getSpeed().toFixed(2),
       autoNext: PR.autoNext,
       smartSpeed: PR.smartSpeed,
-      theme: document.body.classList.contains('light') ? 'light' : 'dark',
+      theme: PR.theme,
+      keybindings: PR.keybindings,
       stats: PR.stats,
       reading: PR.reading,
       rewindSeconds: PR.rewindSeconds,

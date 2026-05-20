@@ -57,26 +57,28 @@ fs.writeFileSync(path.join(DIST, 'sw.js'), swContent);
 // Update index.html to use minified bundle (keep CDN scripts)
 var html = fs.readFileSync(path.join(DIST, 'index.html'), 'utf-8');
 // Remove individual JS module <script> tags (keep CDN deps)
-html = html.replace(/<script src="js\/state\.js"><\/script>\s*/g, '');
-html = html.replace(/<script src="js\/i18n\.js"><\/script>\s*/g, '');
-html = html.replace(/<script src="js\/storage\.js"><\/script>\s*/g, '');
-html = html.replace(/<script src="js\/idb-storage\.js"><\/script>\s*/g, '');
-html = html.replace(/<script src="js\/highlight\.js"><\/script>\s*/g, '');
-html = html.replace(/<script src="js\/bookmarks\.js"><\/script>\s*/g, '');
-html = html.replace(/<script src="js\/annotations\.js"><\/script>\s*/g, '');
-html = html.replace(/<script src="js\/tts\.js"><\/script>\s*/g, '');
-html = html.replace(/<script src="js\/edge-tts\.js"><\/script>\s*/g, '');
-html = html.replace(/<script src="js\/ai-tts\.js"><\/script>\s*/g, '');
-html = html.replace(/<script src="js\/player\.js"><\/script>\s*/g, '');
-html = html.replace(/<script src="js\/import\.js"><\/script>\s*/g, '');
-html = html.replace(/<script src="js\/analytics\.js"><\/script>\s*/g, '');
-html = html.replace(/<script src="js\/ui\.js"><\/script>\s*/g, '');
-html = html.replace(/<script src="js\/tutorial\.js"><\/script>\s*/g, '');
-html = html.replace(/<script src="js\/app\.js"><\/script>\s*/g, '');
-// Insert minified bundle after CDN scripts
+// Handles optional ?v= query string on module scripts
+html = html.replace(/<script src="js\/state\.js(\?v=[^"]*)?"><\/script>\s*/g, '');
+html = html.replace(/<script src="js\/i18n\.js(\?v=[^"]*)?"><\/script>\s*/g, '');
+html = html.replace(/<script src="js\/storage\.js(\?v=[^"]*)?"><\/script>\s*/g, '');
+html = html.replace(/<script src="js\/idb-storage\.js(\?v=[^"]*)?"><\/script>\s*/g, '');
+html = html.replace(/<script src="js\/highlight\.js(\?v=[^"]*)?"><\/script>\s*/g, '');
+html = html.replace(/<script src="js\/bookmarks\.js(\?v=[^"]*)?"><\/script>\s*/g, '');
+html = html.replace(/<script src="js\/annotations\.js(\?v=[^"]*)?"><\/script>\s*/g, '');
+html = html.replace(/<script src="js\/tts\.js(\?v=[^"]*)?"><\/script>\s*/g, '');
+html = html.replace(/<script src="js\/edge-tts\.js(\?v=[^"]*)?"><\/script>\s*/g, '');
+html = html.replace(/<script src="js\/ai-tts\.js(\?v=[^"]*)?"><\/script>\s*/g, '');
+html = html.replace(/<script src="js\/player\.js(\?v=[^"]*)?"><\/script>\s*/g, '');
+html = html.replace(/<script src="js\/import\.js(\?v=[^"]*)?"><\/script>\s*/g, '');
+html = html.replace(/<script src="js\/analytics\.js(\?v=[^"]*)?"><\/script>\s*/g, '');
+html = html.replace(/<script src="js\/ui\.js(\?v=[^"]*)?"><\/script>\s*/g, '');
+html = html.replace(/<script src="js\/tutorial\.js(\?v=[^"]*)?"><\/script>\s*/g, '');
+html = html.replace(/<script src="js\/app\.js(\?v=[^"]*)?"><\/script>\s*/g, '');
+// Insert minified bundle after CDN scripts (tesseract.js — last CDN dep)
+// Use regex to match regardless of extra attributes (e.g. SRI integrity, crossorigin)
 html = html.replace(
-  '<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>',
-  '<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>\n<script src="js/app.min.js"></script>'
+  /<script\s[^>]*src="https:\/\/cdn\.jsdelivr\.net\/npm\/tesseract\.js@5\/dist\/tesseract\.min\.js"[^>]*><\/script>/,
+  '<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" integrity="sha384-GJqSu7vueQ9qN0E9yLPb3Wtpd7OrgK8KmYzC8T1IysG1bcvxvIO4qtYR/D3A991F" crossorigin="anonymous"></script>\n<script src="js/app.min.js"></script>'
 );
 fs.writeFileSync(path.join(DIST, 'index.html'), html);
 

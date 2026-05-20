@@ -72,8 +72,35 @@
   });
 
   PR.elBtnMode.addEventListener('click', function() {
-    document.body.classList.toggle('light');
+    // Cycle: dark → light → auto → dark
+    if (PR.theme === 'dark') {
+      PR.theme = 'light';
+      document.body.classList.add('light');
+    } else if (PR.theme === 'light') {
+      PR.theme = 'auto';
+      if (window.matchMedia('(prefers-color-scheme: light)').matches) document.body.classList.add('light');
+      else document.body.classList.remove('light');
+    } else {
+      PR.theme = 'dark';
+      document.body.classList.remove('light');
+    }
+    PR.updateThemeButton();
     PR.saveSettings();
+  });
+
+  PR.updateThemeButton = function() {
+    if (PR.theme === 'dark') PR.elBtnMode.innerHTML = '&#9790;';
+    else if (PR.theme === 'light') PR.elBtnMode.innerHTML = '&#9788;';
+    else PR.elBtnMode.innerHTML = '&#9728;';
+    PR.elBtnMode.title = PR.theme === 'dark' ? '暗色' : PR.theme === 'light' ? '浅色' : '自动';
+  };
+
+  // Listen for OS theme changes when in auto mode
+  PR._systemThemeMQ = window.matchMedia('(prefers-color-scheme: light)');
+  PR._systemThemeMQ.addEventListener('change', function(e) {
+    if (PR.theme !== 'auto') return;
+    if (e.matches) document.body.classList.add('light');
+    else document.body.classList.remove('light');
   });
 
   PR.elBtnSettings.addEventListener('click', PR.showSettings);
@@ -172,6 +199,9 @@
     PR.saveSettings();
     PR.toast(PR.autoNext ? '已开启连续播放' : '已关闭连续播放');
   });
+
+  var elPlayAll = PR.$('#btn-play-all');
+  if (elPlayAll) elPlayAll.addEventListener('click', PR.playAll);
 
   // Speed presets
   PR.$$('#speed-presets .speed-preset').forEach(function(b) {
@@ -304,19 +334,18 @@
     var tag = (document.activeElement || {}).tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
     if (document.activeElement === PR.elText || document.activeElement === PR.elTitle) return;
-    switch (e.key) {
-      case ' ': e.preventDefault(); PR.isPlaying ? PR.pausePlayback() : PR.startPlayback(); break;
-      case 'ArrowLeft': e.preventDefault(); PR.elBtnRew.click(); break;
-      case 'ArrowRight': e.preventDefault(); PR.elBtnFwd.click(); break;
-      case '[': e.preventDefault(); PR._setABLoopStart(); break;
-      case ']': e.preventDefault(); PR._setABLoopEnd(); break;
-      case '\\': e.preventDefault(); PR._clearABLoop(); break;
-      case 'Escape': PR.stopPlayback(); PR.elAnnToolbar.style.display = 'none'; break;
-      case 'b': e.preventDefault(); PR.addBookmark(''); break;
-      case 'f': e.preventDefault(); PR.toggleFocusMode(); break;
-      case 'k': e.preventDefault(); PR.toggleKaraokeMode(); break;
-      case 'h': e.preventDefault(); if (typeof PR.showTutorial === 'function') PR.showTutorial(0); break;
-    }
+    var kb = PR.keybindings || {};
+    if (e.key === kb.playPause) { e.preventDefault(); PR.isPlaying ? PR.pausePlayback() : PR.startPlayback(); return; }
+    if (e.key === kb.rewind) { e.preventDefault(); PR.elBtnRew.click(); return; }
+    if (e.key === kb.forward) { e.preventDefault(); PR.elBtnFwd.click(); return; }
+    if (e.key === kb.abStart) { e.preventDefault(); PR._setABLoopStart(); return; }
+    if (e.key === kb.abEnd) { e.preventDefault(); PR._setABLoopEnd(); return; }
+    if (e.key === kb.abClear) { e.preventDefault(); PR._clearABLoop(); return; }
+    if (e.key === kb.stop) { PR.stopPlayback(); PR.elAnnToolbar.style.display = 'none'; return; }
+    if (e.key === kb.bookmark) { e.preventDefault(); PR.addBookmark(''); return; }
+    if (e.key === kb.focus) { e.preventDefault(); PR.toggleFocusMode(); return; }
+    if (e.key === kb.karaoke) { e.preventDefault(); PR.toggleKaraokeMode(); return; }
+    if (e.key === kb.help) { e.preventDefault(); if (typeof PR.showTutorial === 'function') PR.showTutorial(0); return; }
   });
 
   // Modal overlay click-outside
@@ -440,6 +469,7 @@
   PR.renderBookmarkDots();
   PR.renderAnnotationMarks();
   PR.updatePlayButton();
+  PR.updateThemeButton();
 
   // Analytics (opt-in, does nothing unless configured)
   if (typeof PR.initAnalytics === 'function') PR.initAnalytics();
@@ -481,6 +511,36 @@
   if (!PR.episodes.length && !PR.elText.textContent.trim()) {
     if (typeof PR.showTutorial === 'function') setTimeout(function() { PR.showTutorial(0); }, 500);
   }
+
+  // Auto-resume prompt
+  try {
+    var resumeData = JSON.parse(localStorage.getItem('pr-resume'));
+    if (resumeData && resumeData.charProgress && resumeData.charProgress > 0) {
+      setTimeout(function() {
+        PR.elToast.innerHTML = '上次听「<strong>' + PR.esc(resumeData.title || '未命名') + '</strong>」到 ' +
+          PR.formatTime(resumeData.charProgress / (4 * PR.getSpeed())) +
+          ' &nbsp;<span id="resume-now" style="color:var(--accent);cursor:pointer;text-decoration:underline">继续播放</span>' +
+          '&nbsp;<span id="resume-ignore" style="color:var(--text-dim);cursor:pointer;margin-left:8px">忽略</span>';
+        PR.elToast.classList.add('show');
+        clearTimeout(PR.toastTimer);
+        PR.$('#resume-now').addEventListener('click', function() {
+          PR.elToast.classList.remove('show');
+          if (resumeData.epId && PR.episodes.some(function(e) { return e.id === resumeData.epId; })) {
+            PR.loadEpisode(resumeData.epId);
+          }
+          setTimeout(function() { PR.seekToChar(resumeData.charProgress); }, 200);
+          PR.toast('已恢复播放位置', 2000);
+        });
+        PR.$('#resume-ignore').addEventListener('click', function() {
+          PR.elToast.classList.remove('show');
+          PR._clearResumePoint();
+        });
+        PR.toastTimer = setTimeout(function() {
+          PR.elToast.classList.remove('show');
+        }, 8000);
+      }, 1500);
+    }
+  } catch(e) {}
 
   if (!PR.elText.textContent.trim() && !PR.episodes.length) setTimeout(function() { PR.elText.focus(); }, 300);
 

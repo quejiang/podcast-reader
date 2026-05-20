@@ -48,6 +48,7 @@
   PR.speakWord = function(index) {
     if (index >= PR.words.length) {
       PR.stopPlayback();
+      PR._saveResumePoint();
       PR.toast('播放完毕');
       PR.updateProgressUI();
       PR.updateStats();
