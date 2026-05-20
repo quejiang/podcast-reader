@@ -115,7 +115,8 @@
     // Always show the browser-specific guide first (reliable, works everywhere)
     PR.showInstallGuide();
 
-    // If native PWA prompt is available (Chrome/Edge), also try it as a bonus.
+    // If native PWA prompt is available (Chromium-based browsers: Chrome/Edge/Opera/Brave/Samsung/etc.),
+    // also try it as a bonus.
     // Chrome may silently ignore prompt() if user previously dismissed it,
     // so we don't gate on its outcome — the guide is already visible.
     if (window._pwa) {

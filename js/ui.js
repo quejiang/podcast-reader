@@ -519,46 +519,220 @@
   // ---- PWA Install Guide (cross-browser) ----
   PR.showInstallGuide = function() {
     console.log('[install] showInstallGuide called');
-    // Close any open tutorial so guide is visible
     var tutOverlay = PR.$('#tutorial-overlay');
     if (tutOverlay) tutOverlay.classList.remove('show');
 
-    var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    var isSafari = /Safari/.test(navigator.userAgent) && !/CriOS|FxiOS|OPiOS|mercury|Edg/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
-    var isChrome = /Chrome/.test(navigator.userAgent) && !/Edg/.test(navigator.userAgent);
-    var isEdge = /Edg/.test(navigator.userAgent);
-    var isAndroid = /Android/.test(navigator.userAgent);
+    var ua = navigator.userAgent;
+    // OS detection
+    var isIOS = /iPad|iPhone|iPod/.test(ua);
+    var isAndroid = /Android/.test(ua);
+    var isMac = /Macintosh|Mac OS X/.test(ua);
     var isDesktop = !isIOS && !isAndroid;
-    var isMac = /Macintosh|Mac OS X/.test(navigator.userAgent);
 
-    var steps = '';
-    if (isIOS && isSafari) {
-      steps = 'iPhone / iPad 安装步骤：\n\n1. 点底部「分享」按钮\n2. 往下滑，点「添加到主屏幕」\n3. 点右上角「添加」\n\n⚠️ 必须用 Safari 打开';
-    } else if (isDesktop && isChrome) {
-      steps = 'Chrome 安装步骤：\n\n地址栏最右侧点「安装」图标\n或点右上角 ⋮ →「安装磨耳朵…」';
-    } else if (isDesktop && isEdge) {
-      steps = 'Edge 安装步骤：\n\n地址栏右侧点「安装」图标\n或点右上角 … →「应用」→「安装此站点」';
+    // Browser detection
+    var isFirefox = /Firefox/.test(ua) && !/Seamonkey/.test(ua);
+    var isSafari = /Safari/.test(ua) && !/Chrome/.test(ua) && !/CriOS|FxiOS|OPiOS|mercury|Edg|OPR|SamsungBrowser/.test(ua);
+    var isEdge = /Edg/.test(ua);
+    var isOpera = /OPR|OPiOS/.test(ua);
+    var isBrave = !!navigator.brave && navigator.brave.isBrave;
+    var isSamsung = /SamsungBrowser/.test(ua);
+    var isChromium = /Chrome/.test(ua) && !isEdge && !isOpera && !isSamsung;
+    // Any Chromium-based: Chrome, Edge, Opera, Brave, Samsung, Vivaldi, Arc, etc.
+    var isAnyChromium = isChromium || isEdge || isOpera || isBrave || isSamsung || (/Chrome/.test(ua) && !/Firefox/.test(ua));
+    // WeChat/QQ/Alipay/UC/embedded browsers
+    var isEmbedded = /MicroMessenger|WeChat|QQ\/|MQQBrowser|AliApp|UCBrowser|baiduboxapp/.test(ua);
+
+    var emoji, title, lines;
+
+    // ---- DESKTOP ----
+    if (isDesktop && (isChromium || isEdge || isOpera || isBrave)) {
+      var browserName = isEdge ? 'Edge' : isOpera ? 'Opera' : isBrave ? 'Brave' : 'Chrome';
+      emoji = '💻';
+      title = browserName + ' 桌面版';
+      lines = [
+        '点击地址栏右侧的 <strong>安装图标</strong> ⬇️',
+        '（一个带加号的小显示器）',
+        '',
+        '或者点右上角菜单 → <strong>「安装磨耳朵…」</strong>',
+        '',
+        '安装后可在程序坞/任务栏快速打开',
+        '支持离线使用和锁屏播放'
+      ];
     } else if (isDesktop && isSafari) {
-      steps = isMac ? 'Safari 安装：\n菜单栏「文件」→「添加到程序坞…」\n(需 macOS Sonoma 或更新版本)\n\n旧版 macOS 建议用 Chrome 打开' : '建议用 Chrome 或 Edge 打开本页面安装';
-    } else if (isAndroid && (isChrome || isEdge)) {
-      steps = 'Android 安装：\n\n方法一：地址栏下方弹窗 →「安装」\n方法二：右上 ⋮ →「添加到主屏幕」';
+      emoji = '💻 🍎';
+      title = 'Safari 桌面版';
+      if (isMac) {
+        lines = [
+          '菜单栏 <strong>「文件」→「添加到程序坞…」</strong>',
+          '',
+          '或者点击地址栏的分享按钮',
+          '',
+          '需要 macOS Sonoma 14 或更新版本',
+          '旧版 macOS 建议用 Chrome / Edge / Brave 打开'
+        ];
+      } else {
+        lines = [
+          'Windows 版 Safari 不支持安装 PWA',
+          '',
+          '建议使用以下浏览器打开：',
+          '• Chrome (google.com/chrome)',
+          '• Edge (microsoft.com/edge)',
+          '• Brave (brave.com)'
+        ];
+      }
+    } else if (isDesktop && isFirefox) {
+      emoji = '💻 🦊';
+      title = 'Firefox 桌面版';
+      lines = [
+        'Firefox 桌面版不支持 PWA 安装',
+        '',
+        '建议使用以下浏览器打开本页面：',
+        '• <strong>Chrome</strong> — 地址栏右侧安装图标',
+        '• <strong>Edge</strong> — 地址栏右侧安装图标',
+        '• <strong>Brave</strong> — 地址栏右侧安装图标'
+      ];
+    } else if (isDesktop) {
+      emoji = '💻';
+      title = '安装到桌面';
+      lines = [
+        '请使用 Chrome / Edge / Brave 打开本页面：',
+        '<strong>podcast-reader-8sg.pages.dev</strong>',
+        '',
+        '打开后地址栏右侧会出现 ⬇️ 安装图标'
+      ];
+    // ---- iOS ----
+    } else if (isIOS && isSafari) {
+      emoji = '📱 🍎';
+      title = 'iPhone / iPad 安装';
+      lines = [
+        '<strong>1.</strong> 点浏览器底部 <strong>分享按钮</strong> ⎋',
+        '<strong>2.</strong> 往下滑动菜单',
+        '<strong>3.</strong> 点 <strong>「添加到主屏幕」</strong>',
+        '<strong>4.</strong> 点右上角 <strong>「添加」</strong>',
+        '',
+        '桌面会出现 🎧 图标，点开即用',
+        '',
+        '⚠️ 微信 / QQ / 支付宝内打开无效',
+        '请用 Safari 打开本页面'
+      ];
+    } else if (isIOS) {
+      emoji = '📱 🍎';
+      title = 'iPhone / iPad 安装';
+      lines = [
+        '请在 <strong>Safari</strong> 中打开本页面：',
+        '<strong>podcast-reader-8sg.pages.dev</strong>',
+        '',
+        '然后按以下步骤操作：',
+        '<strong>1.</strong> 点分享按钮 ⎋',
+        '<strong>2.</strong> 点「添加到主屏幕」',
+        '<strong>3.</strong> 点「添加」'
+      ];
+    // ---- Android ----
+    } else if (isAndroid && isSamsung) {
+      emoji = '📱 🤖';
+      title = 'Samsung Internet 安装';
+      lines = [
+        '<strong>方法一：</strong>地址栏下方弹窗 →「安装」',
+        '<strong>方法二：</strong>点底部 <strong>☰</strong> →「添加到主屏幕」',
+        '',
+        '安装后长按桌面图标可快捷新建朗读'
+      ];
+    } else if (isAndroid && isOpera) {
+      emoji = '📱 🤖';
+      title = 'Opera 安装';
+      lines = [
+        '<strong>方法一：</strong>底部弹窗 →「添加到主屏幕」',
+        '<strong>方法二：</strong>点右下 Opera 图标 →「添加到主屏幕」',
+        '',
+        '安装后长按桌面图标可快捷新建朗读'
+      ];
+    } else if (isAndroid && isFirefox) {
+      emoji = '📱 🦊';
+      title = 'Firefox 安装';
+      lines = [
+        '<strong>方法一：</strong>地址栏下方弹窗 →「安装」',
+        '<strong>方法二：</strong>点右上 <strong>⋮</strong> →「安装」',
+        '',
+        '安装后长按桌面图标可快捷新建朗读'
+      ];
+    } else if (isAndroid && isEdge) {
+      emoji = '📱 🤖';
+      title = 'Edge 安装';
+      lines = [
+        '<strong>方法一：</strong>地址栏下方弹窗 →「安装」',
+        '<strong>方法二：</strong>点底部 <strong>…</strong> →「添加到主屏幕」',
+        '',
+        '安装后长按桌面图标可快捷新建朗读'
+      ];
+    } else if (isAndroid && isBrave) {
+      emoji = '📱 🤖';
+      title = 'Brave 安装';
+      lines = [
+        '<strong>方法一：</strong>地址栏下方弹窗 →「安装」',
+        '<strong>方法二：</strong>点右上 <strong>⋮</strong> →「添加到主屏幕」',
+        '',
+        '安装后长按桌面图标可快捷新建朗读'
+      ];
+    } else if (isAndroid && isChromium) {
+      emoji = '📱 🤖';
+      title = 'Chrome 安装';
+      lines = [
+        '<strong>方法一：</strong>地址栏下方弹窗 →「安装」',
+        '<strong>方法二：</strong>点右上 <strong>⋮</strong> →「添加到主屏幕」',
+        '',
+        '安装后长按桌面图标可快捷新建朗读'
+      ];
+    } else if (isAndroid) {
+      emoji = '📱 🤖';
+      title = 'Android 安装';
+      lines = [
+        '使用 Chrome / Edge / Brave 打开：',
+        '<strong>podcast-reader-8sg.pages.dev</strong>',
+        '',
+        '然后点右上 ⋮ →「添加到主屏幕」'
+      ];
+    // ---- Embedded browsers ----
+    } else if (isEmbedded) {
+      emoji = '⚠️';
+      title = '请用系统浏览器打开';
+      lines = [
+        '当前浏览器（微信/QQ/支付宝等）不支持安装 App',
+        '',
+        '请点击右上角 <strong>…</strong> →「在浏览器中打开」',
+        '或复制链接到 Chrome / Safari 打开：',
+        '<strong>podcast-reader-8sg.pages.dev</strong>'
+      ];
     } else {
-      steps = '安装到桌面：\n\niPhone: Safari → 分享 → 添加到主屏幕\nAndroid: Chrome → ⋮ → 添加到主屏幕\n电脑 Chrome/Edge: 地址栏右侧点安装图标';
+      emoji = '📲';
+      title = '安装到桌面';
+      lines = [
+        '<strong>iPhone / iPad：</strong>Safari → 分享 → 添加到主屏幕',
+        '<strong>Android：</strong>Chrome / Edge → ⋮ → 添加到主屏幕',
+        '<strong>电脑 Chrome / Edge / Brave：</strong>地址栏右侧安装图标',
+        '<strong>电脑 Safari：</strong>文件 → 添加到程序坞'
+      ];
     }
 
-    // Try modal first, fall back to alert
+    var stepsHtml = '<div style="text-align:center;font-size:40px;margin-bottom:8px">' + emoji + '</div>' +
+      '<h3 style="text-align:center;margin-bottom:12px">' + title + '</h3>' +
+      '<div style="font-size:14px;line-height:2.2;color:var(--text)">' +
+      lines.map(function(l) {
+        if (!l) return '<br>';
+        return '<div>' + l + '</div>';
+      }).join('') +
+      '</div>';
+
     if (PR.elModal && PR.elModalOverlay) {
-      PR.elModal.innerHTML =
-        '<div style="text-align:center;font-size:40px;margin-bottom:8px">📲</div>' +
-        '<h3 style="text-align:center">安装到桌面</h3>' +
-        '<div style="font-size:14px;line-height:2;margin:12px 0;color:var(--text);white-space:pre-line">' + PR.esc(steps) + '</div>' +
-        '<button class="secondary" id="btn-close-modal" style="width:100%;margin-top:8px">关闭</button>';
+      PR.elModal.innerHTML = stepsHtml +
+        '<button class="secondary" id="btn-close-modal" style="width:100%;margin-top:12px">关闭</button>';
       PR.elModalOverlay.classList.add('show');
       var btnClose = PR.$('#btn-close-modal');
       if (btnClose) btnClose.addEventListener('click', function() { PR.elModalOverlay.classList.remove('show'); });
       console.log('[install] modal shown');
     } else {
-      alert(steps);
+      // Fallback alert: strip HTML tags for plain text
+      var plainText = title + '\n\n' + lines.filter(function(l) { return l; }).join('\n');
+      alert(plainText);
       console.log('[install] alert shown (modal unavailable)');
     }
   };
