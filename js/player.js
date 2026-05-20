@@ -242,6 +242,7 @@
     PR.updateProgressUI();
     PR.renderBookmarkDots();
     PR.saveDraft();
+    if (window.innerWidth <= 700) PR.elSidebar.classList.add('collapsed');
     PR.elText.focus();
   };
 

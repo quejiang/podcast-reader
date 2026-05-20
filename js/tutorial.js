@@ -1,29 +1,182 @@
-// tutorial.js — 9-step onboarding tutorial
+// tutorial.js — Mobile-first 8-step onboarding + desktop supplement
 (function(PR) {
   'use strict';
 
   var TUT_KEY = 'pr-tutorial-done';
   var TUT_STEP_KEY = 'pr-tutorial-step';
 
+  // Detect touch device for contextual phrasing
+  var isTouchDevice = ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+
   PR.initTutorial = function() {
     var tutDone = localStorage.getItem(TUT_KEY);
+
     window.showTutorial = function(step) {
       renderTutorial(step !== undefined ? step : 0);
     };
-
     PR.showTutorial = window.showTutorial;
 
     function renderTutorial(step) {
+      // Mobile-first tutorial steps. Each step has a mobile section
+      // followed by an optional desktop note.
       var steps = [
-        { icon: '&#127911;', title: '欢迎使用磨耳朵', body: '把文字变成播客，像平时听播客一样<strong>磨耳朵</strong>。<br><br>支持 <kbd>txt</kbd> <kbd>md</kbd> <kbd>pdf</kbd> <kbd>epub</kbd> <kbd>图片</kbd> <kbd>RSS</kbd> <kbd>网页</kbd> 等多种导入方式。<br><br>准备好了吗？跟着指引快速上手 👇' },
-        { icon: '&#9997;', title: '第 1 步：导入内容', body: '<strong>三种方式导入文字：</strong><br><br>1️⃣ 直接<strong>粘贴</strong>文字到中间区域<br>2️⃣ <strong>拖入</strong> txt / pdf / epub / 图片文件<br>3️⃣ 点击顶部 <kbd>&#9881; 设置</kbd> → 输入网页 URL 或 RSS 地址<br><br>试试看：任意网页按 <kbd>F12</kbd> 打开控制台，粘贴前面提供的 Bookmarklet 脚本即可一键导入当前网页。' },
-        { icon: '&#9654;', title: '第 2 步：开始播放', body: '点击底部<strong>播放按钮</strong>或按<strong>空格键</strong>开始朗读。<br><br>朗读时：<br>&#8226; 当前词会<strong>高亮显示</strong>，自动跟随<br>&#8226; 顶部可切换 <kbd>0.75x</kbd> ~ <kbd>2x</kbd> 语速<br>&#8226; 按 <kbd>&#9664;&#9664;</kbd> <kbd>&#9654;&#9654;</kbd> 或 <kbd>←</kbd> <kbd>→</kbd> 快退/快进 15 秒' },
-        { icon: '&#128278;', title: '第 3 步：书签 & 批注', body: '<strong>随时标记，随时回顾：</strong><br><br>&#8226; 按 <kbd>b</kbd> 或点击右上 <kbd>&#128278;</kbd> 添加<strong>书签</strong><br>&#8226; 进度条上的绿点就是书签，点击可跳转<br>&#8226; 选中文字后弹出批注工具，添加<strong>批注</strong><br>&#8226; 批注文字会有下划线，点击可查看' },
-        { icon: '&#128190;', title: '第 4 步：保存播客集', body: '点击右上 <kbd>&#128190; 保存</kbd> 存入侧边栏。<br><br>&#8226; 所有播客集自动保存到<strong>浏览器本地</strong><br>&#8226; 点击左侧 <kbd>&#9776;</kbd> 打开侧边栏管理<br>&#8226; 开启连续播放 &#128257; 可<strong>自动播下一集</strong><br>&#8226; 设置 → 同步 → 可导出/导入备份' },
-        { icon: '&#128241;', title: '第 5 步：安装到手机', body: '<strong>把磨耳朵变成手机 App：</strong><br><br><strong>iPhone（Safari）：</strong><br>打开网址 → 点底部 <kbd>⎋ 分享</kbd> → <strong>「添加到主屏幕」</strong><br><br><strong>Android（Chrome）：</strong><br>打开网址 → 地址栏下方出现横幅 → 点<strong>「安装」</strong><br>或右上 <kbd>⋮</kbd> → 添加到主屏幕<br><br>安装后：<br>&#8226; 桌面点图标打开，全屏无地址栏<br>&#8226; 离线也能用（飞行模式下打开）<br>&#8226; 长按图标 → 快捷入口「新建朗读」<br>&#8226; 微信文章 → 分享到 → 选择「磨耳朵」<br><br><small style="color:var(--text-dim)">提示：锁屏播放选 Edge TTS，后台不中断</small>' },
-        { icon: '&#9889;', title: '第 6 步：高级功能', body: '<strong>更多实用功能：</strong><br><br>&#8226; <kbd>&#9878; 聚焦模式</kbd> — 只高亮当前段落<br>&#8226; <kbd>&#9655; 卡拉OK</kbd> — 当前行居中大字显示<br>&#8226; <kbd>&#9889; 紧凑模式</kbd> — 去掉朗读间的停顿<br>&#8226; <kbd>&#9201; 定时关闭</kbd> — 睡前自动停<br>&#8226; <kbd>&#9788; 浅色主题</kbd> — 白天看更舒服<br>&#8226; <kbd>MP3 导出</kbd> — 需配置 AI 语音引擎' },
-        { icon: '&#129302;', title: '第 7 步：AI 语音（可选）', body: '系统自带 TTS 免费，但音质机械。<br><br>想听<strong>接近真人</strong>的声音？<br><br>点击 <kbd>&#9881; 设置</kbd> → AI 语音 → 选择 <strong>Edge TTS</strong>（免费，推荐）、<strong>ElevenLabs</strong> 或 <strong>OpenAI TTS</strong>。<br><br>Edge TTS 无需 API Key，每月免费 50 万字符，26 种中文语音。<br><br>配置后即可启用 <strong>MP3 导出</strong>、情感参数调节等。' },
-        { icon: '&#127881;', title: '全部掌握！', body: '你已经学会了所有核心功能 🎉<br><br>&#8226; 底部 <kbd>?</kbd> 按钮可随时重新查看教程<br>&#8226; 遇到问题？右下角 <kbd>?</kbd> 点击即可<br><br>享受你的播客时光吧 ☕' }
+        {
+          icon: '&#127911;',
+          title: '欢迎使用磨耳朵',
+          body: '把文字变成播客，像听播客一样<strong>磨耳朵</strong>。<br><br>支持 <kbd>txt</kbd> <kbd>md</kbd> <kbd>pdf</kbd> <kbd>epub</kbd> <kbd>图片</kbd> <kbd>RSS</kbd> <kbd>网页</kbd> 等多种导入方式。<br><br>准备好了吗？跟着指引快速上手 👇',
+          tip: null
+        },
+        {
+          icon: '&#128193;',
+          title: '第1步：导入文字内容',
+          body: isTouchDevice ?
+            '<strong>📱 手机上三种导入方式：</strong><br><br>' +
+            '1️⃣ 复制文字 → <strong>长按中间空白区域</strong> → 粘贴<br>' +
+            '2️⃣ 点击顶栏 <kbd>&#128193; 导入文件</kbd> 按钮 → 选择文件<br>' +
+            '3️⃣ 点击 <kbd>&#9881; 设置</kbd> → 导入 → 输入网页 URL<br><br>' +
+            '<small style="color:var(--text-dim)">📄 支持 PDF / EPUB / 图片 OCR / TXT / Markdown</small>' :
+            '<strong>三种导入方式：</strong><br><br>' +
+            '1️⃣ 直接<strong>粘贴</strong>文字到中间区域 (Ctrl+V)<br>' +
+            '2️⃣ 点击顶栏 <kbd>&#128193; 导入文件</kbd> 或<strong>拖入</strong>文件<br>' +
+            '3️⃣ 点击 <kbd>&#9881; 设置</kbd> → 导入 → 输入网页 URL<br><br>' +
+            '<small style="color:var(--text-dim)">📄 支持 PDF / EPUB / 图片 OCR / TXT / Markdown</small>',
+          tip: { el: '#text-display', msg: '👆 长按这里粘贴文字，或点顶栏 📁 导入文件', pos: 'bottom' }
+        },
+        {
+          icon: '&#9654;',
+          title: '第2步：开始播放',
+          body: isTouchDevice ?
+            '<strong>📱 手机操作：</strong><br><br>' +
+            '&#8226; 点击底部橙色 <strong>▶ 播放按钮</strong> 开始朗读<br>' +
+            '&#8226; 朗读时文字会<strong>逐词高亮</strong>，自动跟随<br>' +
+            '&#8226; 顶栏可切换 <kbd>0.75x</kbd> ~ <kbd>2x</kbd> 语速<br>' +
+            '&#8226; 点击底部 <kbd>&#9664;&#9664;</kbd> <kbd>&#9654;&#9654;</kbd> 后退/前进<br>' +
+            '&#8226; 点击进度条可<strong>跳转到任意位置</strong><br><br>' +
+            '<small style="color:var(--text-dim)">💡 锁屏后继续播放：设置 → AI 语音 → Edge TTS</small>' :
+            '<strong>开始播放：</strong><br><br>' +
+            '&#8226; 点击底部 <strong>▶ 播放按钮</strong> 或按 <strong>空格键</strong><br>' +
+            '&#8226; 朗读时文字会<strong>逐词高亮</strong>，自动跟随<br>' +
+            '&#8226; 顶栏切换 <kbd>0.75x</kbd> ~ <kbd>2x</kbd> 语速<br>' +
+            '&#8226; 按 <kbd>←</kbd> <kbd>→</kbd> 方向键快退/快进<br>' +
+            '&#8226; 点击进度条跳转到任意位置',
+          tip: { el: '#btn-play', msg: '👆 点击这里开始播放', pos: 'top' }
+        },
+        {
+          icon: '&#128278;',
+          title: '第3步：书签 & 批注',
+          body: isTouchDevice ?
+            '<strong>📱 随时标记重点：</strong><br><br>' +
+            '&#8226; 点击右上 <kbd>&#128278; 书签</kbd> 按钮 → 输入备注<br>' +
+            '&#8226; 进度条上的<strong>绿点</strong>就是书签，点击跳转<br>' +
+            '&#8226; <strong>选中文字</strong> → 点弹出的 <kbd>+批注</kbd> 添加笔记<br>' +
+            '&#8226; 批注文字有<strong>绿色下划线</strong>，点击可查看' :
+            '<strong>随时标记：</strong><br><br>' +
+            '&#8226; 按 <kbd>B</kbd> 或点右上 <kbd>&#128278; 书签</kbd> 添加书签<br>' +
+            '&#8226; 进度条上的<strong>绿点</strong>就是书签，点击跳转<br>' +
+            '&#8226; <strong>选中文字</strong> → 点弹出的 <kbd>+批注</kbd> 添加笔记<br>' +
+            '&#8226; 批注文字有<strong>绿色下划线</strong>，悬停查看',
+          tip: { el: '#btn-bookmark', msg: '👆 标记当前位置，方便回顾', pos: 'bottom' }
+        },
+        {
+          icon: '&#128190;',
+          title: '第4步：保存播客集',
+          body: isTouchDevice ?
+            '<strong>📱 管理你的播客：</strong><br><br>' +
+            '&#8226; 点右上橙色的 <kbd>&#128190; 保存</kbd> 存入播客集<br>' +
+            '&#8226; 点左上 <kbd>&#9776;</kbd> 打开侧边栏查看所有播客<br>' +
+            '&#8226; 点播客标题即可<strong>切换播放</strong><br>' +
+            '&#8226; 开启 &#128257; 连续播放 → 自动播下一集<br>' +
+            '&#8226; 点 ✕ 或向左滑<strong>关闭侧边栏</strong>回到主页<br><br>' +
+            '<small style="color:var(--text-dim)">💡 数据保存在浏览器本地，不会丢失</small>' :
+            '<strong>管理播客集：</strong><br><br>' +
+            '&#8226; 点右上橙色 <kbd>&#128190; 保存</kbd> 存入播客集<br>' +
+            '&#8226; 点左上 <kbd>&#9776;</kbd> 或按 <kbd>H</kbd> 打开侧边栏<br>' +
+            '&#8226; 点播客标题即可切换播放<br>' +
+            '&#8226; 开启 &#128257; 连续播放 → 自动播下一集',
+          tip: { el: '#btn-save', msg: '👆 保存当前内容为播客集', pos: 'bottom' }
+        },
+        {
+          icon: '&#128241;',
+          title: '第5步：安装到手机桌面',
+          body: isTouchDevice ?
+            '<strong>把网页变成手机 App：</strong><br><br>' +
+            '<strong>🍎 iPhone (Safari)：</strong><br>' +
+            '点底部 <kbd>⎋ 分享</kbd> → 向下滑 → <strong>「添加到主屏幕」</strong><br><br>' +
+            '<strong>🤖 Android (Chrome)：</strong><br>' +
+            '点右上 <kbd>⋮</kbd> → <strong>「添加到主屏幕」</strong> 或「安装应用」<br><br>' +
+            '<strong>安装后的好处：</strong><br>' +
+            '&#8226; 桌面点图标打开，<strong>全屏无地址栏</strong><br>' +
+            '&#8226; <strong>离线也能用</strong>（飞行模式下打开）<br>' +
+            '&#8226; 长按图标 → 「新建朗读」「继续上次」<br>' +
+            '&#8226; 微信文章 → 分享 → 选择<strong>「磨耳朵」</strong>' :
+            '<strong>把网页变成独立应用：</strong><br><br>' +
+            '<strong>Chrome / Edge：</strong>地址栏右侧点安装图标<br>' +
+            '<strong>Safari：</strong>文件 → 添加到 Dock<br><br>' +
+            '安装后无需打开浏览器，独立窗口运行。',
+          tip: { el: null, msg: '', pos: 'bottom' }
+        },
+        {
+          icon: '&#9889;',
+          title: '第6步：高级功能一览',
+          body: isTouchDevice ?
+            '<strong>📱 实用功能：</strong><br><br>' +
+            '&#8226; <kbd>&#9878; 聚焦模式</kbd> — 只显示当前段落，沉浸阅读<br>' +
+            '&#8226; <kbd>&#9655; 卡拉OK</kbd> — 当前行居中大字，适合跟读<br>' +
+            '&#8226; <kbd>&#9889; 紧凑模式</kbd> — 去掉朗读间停顿，更高效<br>' +
+            '&#8226; <kbd>&#9201; 定时关闭</kbd> — 睡前设 15/30/60 分钟自动停<br>' +
+            '&#8226; <kbd>&#9788; 主题切换</kbd> — 暗色/浅色一键切换<br>' +
+            '&#8226; <kbd>&#9733; 功能全览</kbd> — 随时查看所有功能<br>' +
+            '&#8226; <kbd>MP3 导出</kbd> — AI 模式下导出音频文件' :
+            '<strong>更多功能：</strong><br><br>' +
+            '&#8226; <kbd>&#9878; 聚焦模式</kbd> (F) — 只高亮当前段落<br>' +
+            '&#8226; <kbd>&#9655; 卡拉OK</kbd> (K) — 当前行居中大字<br>' +
+            '&#8226; <kbd>&#9889; 紧凑模式</kbd> — 去掉朗读间停顿<br>' +
+            '&#8226; <kbd>&#9201; 定时关闭</kbd> — 睡前自动停<br>' +
+            '&#8226; <kbd>&#9788; 主题切换</kbd> — 暗色/浅色<br>' +
+            '&#8226; <kbd>MP3 导出</kbd> — AI 模式下导出音频',
+          tip: { el: '#btn-smart-speed', msg: '👆 点击探索更多功能', pos: 'top' }
+        },
+        {
+          icon: '&#129302;',
+          title: '第7步：AI 语音（可选）',
+          body: isTouchDevice ?
+            '<strong>想听更自然的人声？</strong><br><br>' +
+            '点 <kbd>&#9881; 设置</kbd> → AI 语音 → 选择引擎：<br><br>' +
+            '&#8226; <strong>Edge TTS</strong>（推荐⭐）— 免费，26种中文音色<br>' +
+            '&#8226; ElevenLabs — 顶级音质，接近真人<br>' +
+            '&#8226; OpenAI TTS — 按量付费，质量高<br><br>' +
+            '<strong>Edge TTS 无需 API Key</strong>，每月免费 50 万字符，支持后台锁屏播放。<br><br>' +
+            '<small style="color:var(--text-dim)">💡 选 Edge TTS 后就能锁屏听了！</small>' :
+            '<strong>想听更自然的人声？</strong><br><br>' +
+            '点 <kbd>&#9881; 设置</kbd> → AI 语音 → 选择引擎：<br><br>' +
+            '&#8226; <strong>Edge TTS</strong>（推荐⭐）— 免费，26种中文音色<br>' +
+            '&#8226; ElevenLabs / OpenAI TTS — 高级音质<br><br>' +
+            'Edge TTS 无需 API Key，每月免费 50 万字符。',
+          tip: { el: '#btn-settings', msg: '👆 点击设置配置 AI 语音引擎', pos: 'bottom' }
+        },
+        {
+          icon: isTouchDevice ? '&#127881;' : '&#9000;',
+          title: isTouchDevice ? '全部掌握！' : '补充：桌面快捷键',
+          body: isTouchDevice ?
+            '你已经学会了所有核心功能 🎉<br><br>' +
+            '&#8226; 底部 <kbd>?</kbd> 按钮可随时重新查看教程<br>' +
+            '&#8226; 遇到问题？点右下角 <kbd>?</kbd> 即可<br><br>' +
+            '<strong>💻 电脑上使用？</strong><br>' +
+            '支持键盘快捷键：<br>' +
+            '<kbd>Space</kbd> 播放/暂停 &nbsp; <kbd>←→</kbd> 快退/快进<br>' +
+            '<kbd>B</kbd> 书签 &nbsp; <kbd>F</kbd> 聚焦 &nbsp; <kbd>K</kbd> 卡拉OK<br>' +
+            '<kbd>Esc</kbd> 停止 &nbsp; <kbd>H</kbd> 查看教程<br>' +
+            '拖拽文件到窗口直接导入 📂<br><br>' +
+            '享受你的播客时光吧 ☕' :
+            '快捷键一览 ⌨<br><br>' +
+            '<kbd>Space</kbd> 播放/暂停 &nbsp; <kbd>←→</kbd> 快退/快进<br>' +
+            '<kbd>B</kbd> 书签 &nbsp; <kbd>F</kbd> 聚焦 &nbsp; <kbd>K</kbd> 卡拉OK<br>' +
+            '<kbd>Esc</kbd> 停止 &nbsp; <kbd>H</kbd> 查看教程<br>' +
+            '拖拽文件到窗口直接导入 📂<br><br>' +
+            '📱 手机上也能用：<br>' +
+            '添加主屏幕 → 独立 App，支持分享导入、锁屏播放。<br><br>' +
+            '享受你的播客时光吧 ☕'
+        }
       ];
 
       if (step >= steps.length) { finishTutorial(); return; }
@@ -51,10 +204,11 @@
       var btnFinish = PR.$('#tut-finish');
       var btnSkip = PR.$('#tut-skip');
 
-      if (btnPrev) btnPrev.addEventListener('click', function() { renderTutorial(step - 1); });
-      if (btnNext) btnNext.addEventListener('click', function() { renderTutorial(step + 1); });
-      if (btnFinish) btnFinish.addEventListener('click', finishTutorial);
-      if (btnSkip) btnSkip.addEventListener('click', finishTutorial);
+      // Clean up old listeners by replacing clones
+      if (btnPrev) { var np = btnPrev.cloneNode(true); btnPrev.parentNode.replaceChild(np, btnPrev); np.addEventListener('click', function() { renderTutorial(step - 1); }); }
+      if (btnNext) { var nn = btnNext.cloneNode(true); btnNext.parentNode.replaceChild(nn, btnNext); nn.addEventListener('click', function() { renderTutorial(step + 1); }); }
+      if (btnFinish) { var nf = btnFinish.cloneNode(true); btnFinish.parentNode.replaceChild(nf, btnFinish); nf.addEventListener('click', finishTutorial); }
+      if (btnSkip) { var ns = btnSkip.cloneNode(true); btnSkip.parentNode.replaceChild(ns, btnSkip); ns.addEventListener('click', finishTutorial); }
 
       showContextualTip(step);
       localStorage.setItem(TUT_STEP_KEY, step);
@@ -65,8 +219,8 @@
       elTip.classList.remove('show');
 
       var highlights = {
-        1: { el: '#text-display', msg: '👆 在这里粘贴文字或拖入文件', pos: 'bottom' },
-        2: { el: '#btn-play', msg: '👆 点击播放或按空格键', pos: 'top' },
+        1: { el: '#text-display', msg: '👆 长按这里粘贴文字，或点顶栏 📁 导入文件', pos: 'bottom' },
+        2: { el: '#btn-play', msg: '👆 点击这里开始播放', pos: 'top' },
         3: { el: '#btn-bookmark', msg: '👆 添加书签标记当前位置', pos: 'bottom' },
         4: { el: '#btn-save', msg: '👆 保存为播客集', pos: 'bottom' },
         5: { el: null, msg: '', pos: 'bottom' },
@@ -75,7 +229,7 @@
       };
 
       var h = highlights[step];
-      if (!h) {
+      if (!h || !h.el) {
         var spot = document.createElement('div');
         spot.id = 'tut-spotlight-temp';
         spot.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.4);pointer-events:none;z-index:350;transition:opacity .3s';
@@ -146,7 +300,7 @@
         PR.updateProgressUI();
         PR.saveDraft();
       });
-      PR.toast('已加载演示内容，点击播放试试吧');
+      PR.toast('已加载演示内容，点击 ▶ 播放试试吧');
 
       var check = function() {
         if (PR.isPlaying) {
