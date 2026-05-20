@@ -1,4 +1,4 @@
-const CACHE = 'podcast-reader-v7';
+const CACHE = 'podcast-reader-v8';
 const ASSETS = [
   './',
   './index.html',
@@ -83,27 +83,35 @@ self.addEventListener('fetch', (e) => {
 
   if (url.pathname.includes('/v1/') || url.pathname.includes('/consumer/speech/')) return;
 
-  // Network-first for HTML (always fresh), cache-first for everything else
-  if (e.request.destination === 'document' || url.pathname.endsWith('/') || url.pathname.endsWith('.html')) {
+  // Network-first for HTML & JS/CSS (always fresh), cache fallback
+  var isAppFile = e.request.destination === 'document' ||
+                  e.request.destination === 'script' ||
+                  e.request.destination === 'style' ||
+                  url.pathname.endsWith('/') ||
+                  url.pathname.endsWith('.html') ||
+                  url.pathname.endsWith('.js') ||
+                  url.pathname.endsWith('.css');
+  if (isAppFile) {
     e.respondWith(
-      fetch(e.request).then((resp) => {
-        const clone = resp.clone();
-        caches.open(CACHE).then((cache) => cache.put(e.request, clone));
+      fetch(e.request).then(function(resp) {
+        var clone = resp.clone();
+        caches.open(CACHE).then(function(cache) { cache.put(e.request, clone); });
         return resp;
-      }).catch(() => caches.match(e.request))
+      }).catch(function() { return caches.match(e.request); })
     );
     return;
   }
 
+  // Cache-first for images, icons, fonts, etc.
   e.respondWith(
-    caches.match(e.request).then((cached) => {
-      const fetched = fetch(e.request).then((resp) => {
+    caches.match(e.request).then(function(cached) {
+      var fetched = fetch(e.request).then(function(resp) {
         if (resp && resp.status === 200) {
-          const clone = resp.clone();
-          caches.open(CACHE).then((cache) => cache.put(e.request, clone));
+          var clone = resp.clone();
+          caches.open(CACHE).then(function(cache) { cache.put(e.request, clone); });
         }
         return resp;
-      }).catch(() => cached);
+      }).catch(function() { return cached; });
       return cached || fetched;
     })
   );

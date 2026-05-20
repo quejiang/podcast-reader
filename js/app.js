@@ -495,4 +495,30 @@
   console.log('🎧 磨耳朵 v' + PR.version + ' 已就绪');
   console.log('  显示设置 | 发音词典 | 全文搜索 | 标签 | AB循环 | 回退续播 | 撤销删除 | IndexedDB');
 
+  // ---- Service Worker: auto-update on new version ----
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').then(function(reg) {
+      // When a waiting SW appears (new version installed), prompt & refresh
+      reg.addEventListener('updatefound', function() {
+        var newWorker = reg.installing;
+        if (!newWorker) return;
+        newWorker.addEventListener('statechange', function() {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            // New SW is waiting — show toast, then auto-refresh after short delay
+            PR.showToast('新版本已就绪，即将刷新…', 2000);
+            setTimeout(function() { window.location.reload(); }, 2500);
+          }
+        });
+      });
+      // Listen for update messages from SW
+      navigator.serviceWorker.addEventListener('message', function(evt) {
+        if (evt.data && evt.data.type === 'sw-updated') {
+          console.log('SW updated to', evt.data.version);
+        }
+      });
+    }).catch(function() {
+      // SW registration failed — non-critical, app still works
+    });
+  }
+
 })(window.PR);

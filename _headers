@@ -2,12 +2,13 @@
 # Place this file in the root of your deployment directory.
 # Cloudflare Pages auto-detects _headers on deploy.
 
-# App shell (immutable, cache aggressively)
+# JS/CSS: 5-min CDN cache + stale-while-revalidate (24h).
+# Users get latest code within 5 min; old version serves as fallback.
 /css/*
-  Cache-Control: public, max-age=31536000, immutable
+  Cache-Control: public, max-age=300, stale-while-revalidate=86400
 
 /js/*
-  Cache-Control: public, max-age=31536000, immutable
+  Cache-Control: public, max-age=300, stale-while-revalidate=86400
 
 # HTML (validate quickly)
 /index.html
