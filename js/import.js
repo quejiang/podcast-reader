@@ -27,13 +27,13 @@
       var text = await file.text();
       PR.setText(text, name);
     } else if (ext === 'pdf') {
-      PR.toast('正在解析 PDF…', 5000);
+      PR.toast('正在解析 PDF…', 60000);
       try {
+        var arr = await file.arrayBuffer();
         if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
           pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
         }
-        var arr = await file.arrayBuffer();
-        var pdf = await pdfjsLib.getDocument({ data: arr }).promise;
+        var pdf = await pdfjsLib.getDocument({ data: arr.slice(0) }).promise;
         var pages = [];
         for (var i = 1; i <= pdf.numPages; i++) {
           var page = await pdf.getPage(i);
@@ -45,8 +45,8 @@
         if (fullText.trim().length < 20) throw new Error('empty');
         PR.setText(fullText, name);
       } catch(e) {
-        PR.toast('PDF 文本层为空，尝试 OCR…', 5000);
-        PR.ocrFile(file, name);
+        PR.toast('PDF 无文本层，正在 OCR 识别每一页…', 60000);
+        PR.ocrPdf(file, name);
       }
     } else if (ext === 'epub') {
       PR.toast('正在解析 EPUB…', 5000);
@@ -72,7 +72,7 @@
       }
     } else if (['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'].indexOf(ext) >= 0) {
       PR.toast('正在 OCR 识别…', 10000);
-      PR.ocrFile(file, name);
+      PR.ocrImage(file, name);
     } else {
       // Try as text
       try {
@@ -84,8 +84,8 @@
     }
   };
 
-  // OCR using Tesseract.js
-  PR.ocrFile = async function(file, name) {
+  // OCR a single image file using Tesseract.js
+  PR.ocrImage = async function(file, name) {
     try {
       var result = await Tesseract.recognize(file, 'chi_sim+eng', {
         logger: function(m) {
@@ -98,6 +98,54 @@
     } catch(e) {
       PR.toast('OCR 失败: ' + e.message, 3000);
     }
+  };
+
+  // OCR a scanned PDF: render each page to canvas, then OCR each page image
+  PR.ocrPdf = async function(file, name) {
+    try {
+      if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      }
+      var arr = await file.arrayBuffer();
+      var pdf = await pdfjsLib.getDocument({ data: arr.slice(0) }).promise;
+      var totalPages = pdf.numPages;
+      var allText = [];
+
+      // Create a single Tesseract worker for all pages (v5 API)
+      var worker = await Tesseract.createWorker('chi_sim+eng');
+
+      for (var i = 1; i <= totalPages; i++) {
+        PR.toast('OCR 第 ' + i + ' / ' + totalPages + ' 页…', 60000);
+        var page = await pdf.getPage(i);
+        // Render at 2x scale for better OCR accuracy
+        var viewport = page.getViewport({ scale: 2 });
+        var canvas = document.createElement('canvas');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        var ctx = canvas.getContext('2d');
+
+        await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+
+        var ret = await worker.recognize(canvas);
+        var pageText = ret.data.text || '';
+        if (pageText.trim()) allText.push(pageText.trim());
+      }
+
+      await worker.terminate();
+
+      if (!allText.length) {
+        PR.toast('OCR 未能识别出文字，PDF 可能为空白页', 3000);
+        return;
+      }
+      PR.setText(allText.join('\n\n'), name);
+    } catch(e) {
+      PR.toast('PDF OCR 失败: ' + e.message, 3000);
+    }
+  };
+
+  // OCR using Tesseract.js (legacy, kept for image files)
+  PR.ocrFile = async function(file, name) {
+    PR.ocrImage(file, name);
   };
 
   // RSS fetch
