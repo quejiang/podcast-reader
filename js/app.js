@@ -26,6 +26,7 @@
   PR.elBtnExportMp3 = PR.$('#btn-export-mp3');
   PR.elBtnImportFile = PR.$('#btn-import-file');
   PR.elFileInput = PR.$('#file-input');
+  PR.elBtnInstall = PR.$('#btn-install');
   PR.elSleepBadge = PR.$('#sleep-badge');
   PR.elSidebar = PR.$('#sidebar');
   PR.elEpList = PR.$('#episode-list');
@@ -103,6 +104,23 @@
     if (PR.elFileInput.files.length) {
       PR.handleFile(PR.elFileInput.files[0]);
       PR.elFileInput.value = '';
+    }
+  });
+
+  // PWA Install button — works across all browsers
+  PR.elBtnInstall.addEventListener('click', function() {
+    if (window._pwa) {
+      // Chrome / Edge: trigger native PWA install prompt
+      window._pwa.prompt();
+      window._pwa.userChoice.then(function(r) {
+        if (r.outcome === 'accepted') {
+          PR.elBtnInstall.style.display = 'none';
+          PR.toast('安装成功！');
+        }
+      });
+    } else {
+      // Safari / other browsers: show step-by-step guide
+      PR.showInstallGuide();
     }
   });
 
@@ -338,6 +356,20 @@
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(function() {});
   }
+
+  // PWA install prompt — captures the native install dialog for Chrome/Edge
+  window.addEventListener('beforeinstallprompt', function(e) {
+    e.preventDefault();
+    window._pwa = e;
+  });
+
+  // Hide install button if already installed as PWA
+  if (window.matchMedia('(display-mode: standalone)').matches) {
+    PR.elBtnInstall.style.display = 'none';
+  }
+  window.addEventListener('appinstalled', function() {
+    PR.elBtnInstall.style.display = 'none';
+  });
 
   // Tutorial
   PR.initTutorial();
