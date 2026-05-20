@@ -110,6 +110,7 @@
   // PWA Install button — works across all browsers
   if (PR.elBtnInstall) {
   PR.elBtnInstall.addEventListener('click', function() {
+    console.log('[install] button clicked, _pwa=', !!window._pwa);
     // Try native PWA install prompt (Chrome/Edge desktop & Android)
     if (window._pwa) {
       try {

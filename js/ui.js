@@ -518,11 +518,15 @@
 
   // ---- PWA Install Guide (cross-browser) ----
   PR.showInstallGuide = function() {
-    try {
+    console.log('[install] showInstallGuide called');
     // Close any open tutorial so guide is visible
     var tutOverlay = PR.$('#tutorial-overlay');
     if (tutOverlay) tutOverlay.classList.remove('show');
-    if (!PR.elModal || !PR.elModalOverlay) return;
+    if (!PR.elModal || !PR.elModalOverlay) {
+      console.error('[install] modal elements missing', !!PR.elModal, !!PR.elModalOverlay);
+      alert('安装指引：请用 Chrome/Edge 打开本页面，然后点击地址栏右侧的安装图标。');
+      return;
+    }
 
     var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     var isSafari = /Safari/.test(navigator.userAgent) && !/CriOS|FxiOS|OPiOS|mercury|Edg/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
@@ -609,9 +613,7 @@
       '<button class="secondary" id="btn-close-modal" style="width:100%;margin-top:8px">关闭</button>';
     PR.elModalOverlay.classList.add('show');
     PR.$('#btn-close-modal').addEventListener('click', function() { PR.elModalOverlay.classList.remove('show'); });
-    } catch(e) {
-      // Silently fail — guide is best-effort
-    }
+    console.log('[install] modal shown');
   };
 
 })(window.PR);
