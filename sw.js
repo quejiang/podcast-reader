@@ -1,4 +1,4 @@
-const CACHE = 'podcast-reader-v6';
+const CACHE = 'podcast-reader-v7';
 const ASSETS = [
   './',
   './index.html',
@@ -19,6 +19,8 @@ const ASSETS = [
   './js/analytics.js',
   './js/ui.js',
   './js/tutorial.js',
+  './js/i18n.js',
+  './js/idb-storage.js',
   './js/app.js'
 ];
 
