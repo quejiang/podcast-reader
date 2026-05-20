@@ -518,6 +518,12 @@
 
   // ---- PWA Install Guide (cross-browser) ----
   PR.showInstallGuide = function() {
+    try {
+    // Close any open tutorial so guide is visible
+    var tutOverlay = PR.$('#tutorial-overlay');
+    if (tutOverlay) tutOverlay.classList.remove('show');
+    if (!PR.elModal || !PR.elModalOverlay) return;
+
     var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     var isSafari = /Safari/.test(navigator.userAgent) && !/CriOS|FxiOS|OPiOS|mercury|Edg/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
     var isChrome = /Chrome/.test(navigator.userAgent) && !/Edg/.test(navigator.userAgent);
@@ -603,6 +609,9 @@
       '<button class="secondary" id="btn-close-modal" style="width:100%;margin-top:8px">关闭</button>';
     PR.elModalOverlay.classList.add('show');
     PR.$('#btn-close-modal').addEventListener('click', function() { PR.elModalOverlay.classList.remove('show'); });
+    } catch(e) {
+      // Silently fail — guide is best-effort
+    }
   };
 
 })(window.PR);
