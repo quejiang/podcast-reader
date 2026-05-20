@@ -42,13 +42,15 @@
     var speakText = w.text;
     var speakEnd = w.charEnd;
     var j = index + 1;
-    // Group consecutive short words for smoother TTS
-    while (j < PR.words.length &&
-      (PR.words[j].text.match(/^[\u4e00-\u9fff]+$/) ? PR.words[j].text.length <= 5 : PR.words[j].text.length <= 5) &&
-      j - index < 4) {
-      speakText += PR.words[j].text;
+    // Group consecutive words up to ~35 chars, stopping at sentence boundaries
+    var MAX_CHARS = 35;
+    while (j < PR.words.length && speakText.length + PR.words[j].text.length <= MAX_CHARS) {
+      var nextText = PR.words[j].text;
+      speakText += nextText;
       speakEnd = PR.words[j].charEnd;
       j++;
+      // Stop at sentence-ending punctuation for natural pauses
+      if (/[。！？\n]$/.test(nextText)) break;
     }
     var wordsInGroup = j - index;
     var utter = new SpeechSynthesisUtterance(speakText);
@@ -106,7 +108,7 @@
       PR.charProgress = lw.charEnd;
       PR.updateProgressUI();
       if (PR.isPlaying) {
-        var delay = PR.smartSpeed ? 20 : 120;
+        var delay = PR.smartSpeed ? 5 : 30;
         setTimeout(function() { PR.speakWord(index + wordsInGroup); }, delay);
       } else {
         PR.currentUtterance = null;
@@ -122,7 +124,7 @@
       PR.charProgress = groupWords[groupWords.length - 1].charEnd;
       PR.updateProgressUI();
       if (PR.isPlaying) {
-        setTimeout(function() { PR.speakWord(index + wordsInGroup); }, 100);
+        setTimeout(function() { PR.speakWord(index + wordsInGroup); }, 30);
       } else {
         PR.currentUtterance = null;
       }

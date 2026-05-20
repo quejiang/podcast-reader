@@ -2,24 +2,18 @@
 (function(PR) {
   'use strict';
 
-  // Build word array from text with character offsets
+  // Build word array from text with character offsets.
+  // Splits Chinese at natural punctuation boundaries (。！？，；：、) so TTS pauses correctly.
   PR.buildWords = function(text) {
     if (!text || !text.trim()) return [];
     var result = [];
-    var pos = 0;
-    var re = /([\u4e00-\u9fff\u3400-\u4dbf]+|[a-zA-Z0-9]+|[\u3000-\u303f\uff00-\uffef]|[^\S\n]+|[\n]+|[^\u4e00-\u9fff\u3400-\u4dbfa-zA-Z0-9\s])/g;
+    // Chinese(1-15 chars) + optional trailing punctuation | English word | newline | whitespace | standalone punct
+    var re = /([\u4e00-\u9fff\u3400-\u4dbf]{1,15}[。！？，；：、\n]?|[a-zA-Z0-9]+|[^\S\n]+|\n+|[^\u4e00-\u9fff\u3400-\u4dbfa-zA-Z0-9\s])/g;
     var m;
     while ((m = re.exec(text)) !== null) {
       var t = m[1];
       if (!t) continue;
-      if (/^[\u4e00-\u9fff\u3400-\u4dbf]+$/.test(t) && t.length > 8) {
-        for (var i = 0; i < t.length; i += 5) {
-          var sub = t.slice(i, Math.min(i + 8, t.length));
-          result.push({ text: sub, charStart: m.index + i, charEnd: m.index + i + sub.length });
-        }
-      } else {
-        result.push({ text: t, charStart: m.index, charEnd: m.index + t.length });
-      }
+      result.push({ text: t, charStart: m.index, charEnd: m.index + t.length });
     }
     return result;
   };
