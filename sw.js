@@ -1,4 +1,4 @@
-const CACHE = 'podcast-reader-v8';
+const CACHE = 'podcast-reader-v9';
 const ASSETS = [
   './',
   './index.html',
@@ -37,7 +37,7 @@ self.addEventListener('activate', (e) => {
     Promise.all([
       self.clients.matchAll({ type: 'window' }).then(function(clients) {
         clients.forEach(function(client) {
-          client.postMessage({ type: 'sw-updated', version: 'v3.4' });
+          client.postMessage({ type: 'sw-updated', version: '3.5' });
         });
       }),
       caches.keys().then((keys) =>

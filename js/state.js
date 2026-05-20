@@ -2,7 +2,7 @@
 window.PR = window.PR || {};
 
 // ---- Version ----
-PR.version = '3.4';
+PR.version = '3.5';
 
 (function(PR) {
   'use strict';
