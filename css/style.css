@@ -229,12 +229,13 @@ body{
 #ann-toolbar{position:absolute;background:var(--accent);color:#fff;padding:4px 8px;border-radius:4px;font-size:11px;z-index:40;display:none;cursor:pointer;white-space:nowrap}
 
 /* Tutorial overlay */
-#tutorial-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:400;display:none;align-items:center;justify-content:center}
+#tutorial-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:400;display:none;align-items:center;justify-content:center;pointer-events:none}
 #tutorial-overlay.show{display:flex}
 #tutorial-card{
   background:var(--surface);border:1px solid var(--border);
   border-radius:var(--radius);padding:24px 20px 20px;max-width:380px;width:90%;
   box-shadow:var(--shadow);text-align:center;position:relative;transition:background .3s;
+  pointer-events:auto;
 }
 #tutorial-card h2{font-size:20px;color:var(--accent);margin-bottom:4px}
 #tutorial-card .tut-subtitle{font-size:12px;color:var(--text-dim);margin-bottom:16px}
