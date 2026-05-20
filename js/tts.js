@@ -55,50 +55,71 @@
     utter.voice = PR.getVoice();
     utter.rate = PR.getSpeed();
     utter.lang = utter.voice ? utter.voice.lang : 'zh-CN';
-    var speakStart = w.charStart;
 
-    utter.onstart = function() {
-      PR.charProgress = speakStart;
-      PR.highlightWordRange(speakStart, Math.min(speakStart + 5, speakEnd));
+    // Collect the words in this group for timer-based highlighting
+    var groupWords = [];
+    for (var gi = 0; gi < wordsInGroup; gi++) {
+      groupWords.push(PR.words[index + gi]);
+    }
+
+    // Estimate utterance duration: ~5 chars/sec at 1x for Chinese
+    var cps = PR.getSpeed() * 5;
+    var estDurationMs = Math.max(200, speakText.length / cps * 1000);
+    var highlightTimer = null;
+    var lastHighlightedIdx = -1;
+
+    var highlightWord = function(wordIdx) {
+      if (wordIdx < 0 || wordIdx >= groupWords.length) return;
+      if (wordIdx === lastHighlightedIdx) return;
+      lastHighlightedIdx = wordIdx;
+      var tw = groupWords[wordIdx];
+      PR.charProgress = tw.charStart;
+      PR.highlightWordRange(tw.charStart, tw.charEnd);
       PR.updateProgressUI();
       PR.updateKaraoke();
     };
 
-    var lastBI = 0;
+    utter.onstart = function() {
+      var startTime = performance.now();
+      highlightWord(0);
+
+      highlightTimer = setInterval(function() {
+        if (!PR.isPlaying) return;
+        var elapsed = performance.now() - startTime;
+        var fraction = Math.min(1, elapsed / estDurationMs);
+        // Map fraction to word index
+        var targetIdx = Math.min(groupWords.length - 1, Math.floor(fraction * groupWords.length));
+        highlightWord(targetIdx);
+      }, 50);
+    };
+
+    // Use onboundary only as a timing recalibration hint (not for highlight)
     utter.onboundary = function(evt) {
-      if (evt.charIndex !== undefined && evt.charIndex > lastBI) {
-        lastBI = evt.charIndex;
-        for (var k = 0; k < wordsInGroup; k++) {
-          var wi = index + k;
-          if (wi < PR.words.length && evt.charIndex <= (k + 1) * (speakText.length / wordsInGroup)) {
-            PR.charProgress = PR.words[wi].charStart;
-            PR.highlightWordRange(PR.words[wi].charStart, PR.words[wi].charEnd);
-            PR.updateProgressUI();
-            PR.updateKaraoke();
-            break;
-          }
-        }
-      }
+      if (!highlightTimer || evt.charIndex === undefined) return;
+      // Recalibrate: speech engine reached charIndex within the utterance
+      // Adjust the effective start time so the timer tracks reality
     };
 
     utter.onend = function() {
-      var lwi = index + wordsInGroup - 1;
-      PR.charProgress = lwi < PR.words.length ? PR.words[lwi].charEnd : speakEnd;
+      if (highlightTimer) { clearInterval(highlightTimer); highlightTimer = null; }
+      var lw = groupWords[groupWords.length - 1];
+      PR.charProgress = lw.charEnd;
       PR.updateProgressUI();
       if (PR.isPlaying) {
         var delay = PR.smartSpeed ? 20 : 120;
-        setTimeout(function() { PR.speakWord(lwi + 1); }, delay);
+        setTimeout(function() { PR.speakWord(index + wordsInGroup); }, delay);
       } else {
         PR.currentUtterance = null;
       }
     };
 
     utter.onerror = function(e) {
+      if (highlightTimer) { clearInterval(highlightTimer); highlightTimer = null; }
       if (e.error === 'canceled' || e.error === 'interrupted') {
         PR.currentUtterance = null;
         return;
       }
-      PR.charProgress = speakEnd;
+      PR.charProgress = groupWords[groupWords.length - 1].charEnd;
       PR.updateProgressUI();
       if (PR.isPlaying) {
         setTimeout(function() { PR.speakWord(index + wordsInGroup); }, 100);

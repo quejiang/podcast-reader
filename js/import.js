@@ -29,6 +29,9 @@
     } else if (ext === 'pdf') {
       PR.toast('正在解析 PDF…', 5000);
       try {
+        if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
+          pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        }
         var arr = await file.arrayBuffer();
         var pdf = await pdfjsLib.getDocument({ data: arr }).promise;
         var pages = [];
