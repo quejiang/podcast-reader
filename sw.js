@@ -1,4 +1,4 @@
-const CACHE = 'podcast-reader-v5';
+const CACHE = 'podcast-reader-v6';
 const ASSETS = [
   './',
   './index.html',
@@ -38,15 +38,13 @@ self.addEventListener('activate', (e) => {
   self.clients.claim();
 });
 
-// 处理 Share Target POST 请求
+// Share Target: 接收分享的文件/文本
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
 
-  // Share Target: 接收分享的文件/文本
   if (e.request.method === 'POST' && url.pathname.endsWith('/') && url.searchParams.get('action') === 'shared') {
     e.respondWith(
       (async function() {
-        // 将 POST 数据暂存，重定向到首页由 app.js 读取
         const formData = await e.request.formData();
         const client = await self.clients.get(e.resultingClientId || (await self.clients.matchAll({ type: 'window' }))[0]?.id);
         if (client) {
@@ -59,7 +57,6 @@ self.addEventListener('fetch', (e) => {
             shared.fileName = file.name;
             shared.fileType = file.type;
             shared.fileSize = file.size;
-            // 将文件内容暂存到 cache storage
             const shareCache = await caches.open('share-target');
             await shareCache.put('shared-file', new Response(buf, { headers: { 'Content-Type': file.type, 'X-File-Name': encodeURIComponent(file.name) } }));
             shared.hasFile = true;
@@ -74,10 +71,20 @@ self.addEventListener('fetch', (e) => {
 
   if (e.request.method !== 'GET') return;
 
-  // 不缓存 API 调用
   if (url.pathname.includes('/v1/') || url.pathname.includes('/consumer/speech/')) return;
 
-  // Cache-first, network-update
+  // Network-first for HTML (always fresh), cache-first for everything else
+  if (e.request.destination === 'document' || url.pathname.endsWith('/') || url.pathname.endsWith('.html')) {
+    e.respondWith(
+      fetch(e.request).then((resp) => {
+        const clone = resp.clone();
+        caches.open(CACHE).then((cache) => cache.put(e.request, clone));
+        return resp;
+      }).catch(() => caches.match(e.request))
+    );
+    return;
+  }
+
   e.respondWith(
     caches.match(e.request).then((cached) => {
       const fetched = fetch(e.request).then((resp) => {

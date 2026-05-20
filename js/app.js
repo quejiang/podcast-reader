@@ -111,7 +111,13 @@
   if (PR.elBtnInstall) {
   PR.elBtnInstall.addEventListener('click', function() {
     console.log('[install] button clicked, _pwa=', !!window._pwa);
-    // Try native PWA install prompt (Chrome/Edge desktop & Android)
+
+    // Always show the browser-specific guide first (reliable, works everywhere)
+    PR.showInstallGuide();
+
+    // If native PWA prompt is available (Chrome/Edge), also try it as a bonus.
+    // Chrome may silently ignore prompt() if user previously dismissed it,
+    // so we don't gate on its outcome — the guide is already visible.
     if (window._pwa) {
       try {
         window._pwa.prompt();
@@ -119,20 +125,12 @@
           if (r.outcome === 'accepted') {
             PR.elBtnInstall.style.display = 'none';
             PR.toast('安装成功！');
+            // Close guide since native install succeeded
+            if (PR.elModalOverlay) PR.elModalOverlay.classList.remove('show');
           }
-        }).catch(function() {
-          // prompt rejected or dismissed — show manual guide
-          PR.showInstallGuide();
-        });
-      } catch(e) {
-        // prompt() threw — browser doesn't actually support it
-        PR.showInstallGuide();
-      }
-      return;
+        }).catch(function() {});
+      } catch(e) {}
     }
-
-    // No native prompt available — browser-specific guide
-    PR.showInstallGuide();
   });
   }
 
