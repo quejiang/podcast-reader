@@ -22,6 +22,13 @@
         PR.elBtnSmartSpeed.classList.toggle('active', PR.smartSpeed);
       }
       if (s.stats) PR.stats = s.stats;
+      // New settings
+      if (s.reading) PR.reading = Object.assign(PR.reading, s.reading);
+      if (s.rewindSeconds !== undefined) PR.rewindSeconds = s.rewindSeconds;
+      if (s.pronDict) PR.pronDict = s.pronDict;
+      if (s.tags) PR.tags = s.tags;
+      if (s.syncConfig) PR.syncConfig = s.syncConfig;
+      PR.applyReadingSettings();
     } catch(e) {}
   };
 
@@ -32,7 +39,12 @@
       autoNext: PR.autoNext,
       smartSpeed: PR.smartSpeed,
       theme: document.body.classList.contains('light') ? 'light' : 'dark',
-      stats: PR.stats
+      stats: PR.stats,
+      reading: PR.reading,
+      rewindSeconds: PR.rewindSeconds,
+      pronDict: PR.pronDict,
+      tags: PR.tags,
+      syncConfig: PR.syncConfig || null
     };
     localStorage.setItem('pr-settings', JSON.stringify(s));
   };

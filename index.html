@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" role="application" aria-label="磨耳朵 Podcast Reader">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -12,87 +12,97 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="manifest" href="manifest.json">
 <link rel="stylesheet" href="css/style.css">
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=LXGW+WenKai:ital,wght@0,300;0,400;0,700;1,400&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:ital,wght@0,400;0,700;1,400&family=Noto+Serif+SC:ital,wght@0,400;0,700;1,400&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
 <title>磨耳朵 · Podcast Reader</title>
 </head>
 <body>
 
-<div id="topbar">
-  <button class="btn-icon" id="btn-toggle-sidebar" title="侧边栏">&#9776;</button>
-  <div class="logo">磨耳朵<span> · Podcast Reader</span></div>
+<header id="topbar" role="toolbar" aria-label="播放控制工具栏">
+  <button class="btn-icon" id="btn-toggle-sidebar" aria-label="切换侧边栏" title="侧边栏">&#9776;</button>
+  <div class="logo" role="banner">磨耳朵<span> · Podcast Reader</span></div>
   <div class="spacer"></div>
-  <div class="ctrl-group" id="speed-presets">
-    <span class="speed-preset" data-rate="0.75">0.75x</span>
-    <span class="speed-preset active" data-rate="1">1x</span>
-    <span class="speed-preset" data-rate="1.25">1.25x</span>
-    <span class="speed-preset" data-rate="1.5">1.5x</span>
-    <span class="speed-preset" data-rate="2">2x</span>
+  <div class="ctrl-group" id="speed-presets" role="radiogroup" aria-label="播放速度">
+    <span class="speed-preset" data-rate="0.75" role="radio" aria-checked="false" aria-label="0.75倍速" tabindex="0">0.75x</span>
+    <span class="speed-preset active" data-rate="1" role="radio" aria-checked="true" aria-label="1倍速" tabindex="0">1x</span>
+    <span class="speed-preset" data-rate="1.25" role="radio" aria-checked="false" aria-label="1.25倍速" tabindex="0">1.25x</span>
+    <span class="speed-preset" data-rate="1.5" role="radio" aria-checked="false" aria-label="1.5倍速" tabindex="0">1.5x</span>
+    <span class="speed-preset" data-rate="2" role="radio" aria-checked="false" aria-label="2倍速" tabindex="0">2x</span>
   </div>
   <div class="ctrl-group">
-    <select id="voice-select" style="max-width:90px;"></select>
+    <select id="voice-select" aria-label="选择语音" style="max-width:90px;"></select>
   </div>
-  <button class="btn-icon" id="btn-focus" title="聚焦模式">&#9878;</button>
-  <button class="btn-icon" id="btn-karaoke" title="卡拉OK模式">&#9655;</button>
-  <button class="btn-icon" id="btn-smart-speed" title="紧凑模式">&#9889;</button>
-  <button class="btn-icon" id="btn-sleep" title="定时关闭">&#9201;<span class="sleep-timer-badge" id="sleep-badge"></span></button>
-  <button class="btn-icon" id="btn-features" title="功能全览">&#9733;</button>
-  <button class="btn-icon" id="btn-mode" title="浅色/暗色">&#9788;</button>
-  <button class="btn-icon" id="btn-settings" title="设置">&#9881;</button>
-  <button class="btn-icon" id="btn-import-file" title="导入文件">&#128193;</button>
-  <button class="btn-icon" id="btn-install" title="安装App" style="color:var(--play);" onclick="console.log('[install] inline onclick');if(window.PR&&PR.showInstallGuide){PR.showInstallGuide()}else{alert('安装指引：请用Chrome/Edge打开本页面，然后点击地址栏右侧的安装图标。')}">&#11015;</button>
-  <button class="btn-icon" id="btn-save" title="保存" style="color:var(--accent);">&#128190;</button>
-</div>
-<input type="file" id="file-input" style="display:none">
+  <button class="btn-icon" id="btn-focus" aria-label="聚焦模式" title="聚焦模式">&#9878;</button>
+  <button class="btn-icon" id="btn-karaoke" aria-label="卡拉OK模式" title="卡拉OK模式">&#9655;</button>
+  <button class="btn-icon" id="btn-smart-speed" aria-label="紧凑模式" title="紧凑模式">&#9889;</button>
+  <button class="btn-icon" id="btn-sleep" aria-label="定时关闭" title="定时关闭">&#9201;<span class="sleep-timer-badge" id="sleep-badge"></span></button>
+  <button class="btn-icon" id="btn-features" aria-label="功能全览" title="功能全览">&#9733;</button>
+  <button class="btn-icon" id="btn-mode" aria-label="切换浅色/暗色主题" title="浅色/暗色">&#9788;</button>
+  <button class="btn-icon" id="btn-settings" aria-label="设置" title="设置">&#9881;</button>
+  <button class="btn-icon" id="btn-import-file" aria-label="导入文件" title="导入文件">&#128193;</button>
+  <button class="btn-icon" id="btn-install" aria-label="安装App" title="安装App" style="color:var(--play);" onclick="console.log('[install] inline onclick');if(window.PR&&PR.showInstallGuide){PR.showInstallGuide()}else{alert('安装指引：请用Chrome/Edge打开本页面，然后点击地址栏右侧的安装图标。')}">&#11015;</button>
+  <button class="btn-icon" id="btn-save" aria-label="保存" title="保存" style="color:var(--accent);">&#128190;</button>
+</header>
+<input type="file" id="file-input" style="display:none" aria-hidden="true">
 
 <div id="main">
-  <div id="sidebar" class="collapsed">
+  <nav id="sidebar" class="collapsed" role="navigation" aria-label="播客集列表">
     <div id="sidebar-header">
       <h3>播客集</h3>
-      <button id="btn-new-ep" title="新建">+</button>
-      <button id="btn-auto-next" title="连续播放">&#128257;</button>
-      <button id="btn-close-sidebar" title="返回">&#10005;</button>
+      <button id="btn-new-ep" aria-label="新建播客集" title="新建">+</button>
+      <button id="btn-sort-ep" aria-label="排序方式" title="排序">&#128260;</button>
+      <button id="btn-tag-ep" aria-label="编辑标签" title="标签">&#127991;</button>
+      <button id="btn-auto-next" aria-label="连续播放" title="连续播放">&#128257;</button>
+      <button id="btn-close-sidebar" aria-label="关闭侧边栏" title="返回">&#10005;</button>
     </div>
-    <div id="episode-list"><div id="no-episodes">还没有保存的播客集<br>粘贴文字或导入文件后点击「保存」</div></div>
-  </div>
+    <div id="ep-search-wrap" style="padding:6px 8px">
+      <input type="text" id="ep-search" placeholder="搜索播客集…" aria-label="搜索播客集" style="width:100%;border:none;background:var(--surface2);color:var(--text);padding:6px 10px;border-radius:4px;font-size:12px;font-family:var(--font)">
+    </div>
+    <div id="ep-sort-wrap" style="display:none;padding:0 8px 6px 8px">
+      <span class="ep-sort-opt" data-sort="newest" style="cursor:pointer;font-size:11px;color:var(--accent);margin-right:10px">最新</span>
+      <span class="ep-sort-opt" data-sort="alpha" style="cursor:pointer;font-size:11px;color:var(--text-dim);margin-right:10px">字母</span>
+      <span class="ep-sort-opt" data-sort="progress" style="cursor:pointer;font-size:11px;color:var(--text-dim);margin-right:10px">进度</span>
+    </div>
+    <div id="episode-list" role="list" aria-label="播客集列表"><div id="no-episodes">还没有保存的播客集<br>粘贴文字或导入文件后点击「保存」</div></div>
+  </nav>
 
-  <div id="content-area">
+  <main id="content-area" role="main" aria-label="文本阅读区">
     <div id="title-row">
-      <input type="text" id="title-input" placeholder="播客标题…">
-      <button id="btn-annotate" title="添加批注">&#9998;</button>
-      <button id="btn-bookmark" title="书签">&#128278;</button>
+      <input type="text" id="title-input" aria-label="播客标题" placeholder="播客标题…">
+      <button id="btn-annotate" aria-label="添加批注" title="添加批注">&#9998;</button>
+      <button id="btn-bookmark" aria-label="书签" title="书签">&#128278;</button>
     </div>
-    <div id="text-display" contenteditable="true"></div>
-    <div id="karaoke-line"></div>
-    <div id="drop-overlay">释放文件以导入</div>
-    <div id="bookmark-panel"></div>
-    <div id="ann-tooltip"></div>
-  </div>
+    <div id="text-display" contenteditable="true" aria-label="文本内容，可编辑" role="textbox" aria-multiline="true"></div>
+    <div id="karaoke-line" aria-label="卡拉OK行" aria-live="polite"></div>
+    <div id="drop-overlay" aria-hidden="true">释放文件以导入</div>
+    <div id="bookmark-panel" role="dialog" aria-label="书签面板"></div>
+    <div id="ann-tooltip" role="tooltip" aria-label="批注详情"></div>
+  </main>
 </div>
 
-<div id="player-bar">
+<footer id="player-bar" role="region" aria-label="播放控制条" aria-live="polite">
   <div id="progress-row">
-    <div id="progress-bar">
+    <div id="progress-bar" role="slider" aria-label="播放进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0">
       <div id="progress-fill"></div>
-      <div id="bookmark-dots" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;"></div>
+      <div id="bookmark-dots" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;" aria-hidden="true"></div>
     </div>
     <div id="time-display">--:-- / --:--</div>
   </div>
   <div id="controls-row">
-    <button class="btn btn-skip" id="btn-rew" title="后退 15s">&#9664;&#9664;</button>
-    <button class="btn" id="btn-play" title="播放/暂停">&#9654;</button>
-    <button class="btn btn-skip" id="btn-fwd" title="前进 15s">&#9654;&#9654;</button>
-    <button class="btn btn-skip" id="btn-export-mp3" title="导出音频" style="border-radius:4px;width:auto;padding:0 8px;font-size:11px;font-family:var(--font);">MP3</button>
+    <button class="btn btn-skip" id="btn-rew" aria-label="后退15秒" title="后退 15s">&#9664;&#9664;</button>
+    <button class="btn" id="btn-play" aria-label="播放" title="播放/暂停">&#9654;</button>
+    <button class="btn btn-skip" id="btn-fwd" aria-label="前进15秒" title="前进 15s">&#9654;&#9654;</button>
+    <button class="btn btn-skip" id="btn-export-mp3" aria-label="导出MP3" title="导出音频" style="border-radius:4px;width:auto;padding:0 8px;font-size:11px;font-family:var(--font);">MP3</button>
   </div>
-</div>
+</footer>
 
-<div id="modal-overlay"><div id="modal"></div></div>
-<div id="feature-tip" class="feature-tip"></div>
-<div id="tutorial-overlay">
-  <div id="tutorial-card"></div>
-</div>
-<div id="demo-badge">&#127912; 演示内容</div>
-<div id="stats-panel"><button id="stats-close">&times;</button></div>
-<div id="toast"></div>
-<div id="ann-toolbar">添加批注</div>
+<div id="modal-overlay" role="dialog" aria-modal="true" aria-label="设置对话框"><div id="modal"></div></div>
+<div id="feature-tip" class="feature-tip" role="status" aria-live="polite"></div>
+<div id="tutorial-overlay"><div id="tutorial-card"></div></div>
+<div id="demo-badge" aria-label="演示内容">&#127912; 演示内容</div>
+<div id="stats-panel" role="dialog" aria-label="统计面板"><button id="stats-close" aria-label="关闭">&times;</button></div>
+<div id="toast" role="status" aria-live="polite"></div>
+<div id="ann-toolbar" role="tooltip" aria-label="批注工具栏">添加批注</div>
 
 <!-- CDN dependencies (must load before app modules) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>

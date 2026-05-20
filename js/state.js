@@ -31,6 +31,18 @@ window.PR = window.PR || {};
   PR.focusMode = false;
   PR.karaokeMode = false;
   PR.stats = { totalCharsListened: 0, totalSeconds: 0, sessionCount: 0 };
+  PR.tags = [];              // [{id, name, color}]
+  PR.pronDict = {};          // { "word": "pronunciation" }
+  PR.syncConfig = null;      // { url, username, password, enabled }
+  PR.loopAB = null;          // {charStart, charEnd} for AB repeat
+  PR.rewindSeconds = 3;      // auto-rewind on resume (seconds)
+  PR.reading = {             // reading display settings
+    fontSize: 16,
+    lineHeight: 1.8,
+    padding: 24,
+    fontFamily: 'default',
+    autoScroll: true
+  };
 
   // ---- DOM references (populated by app.js) ----
   // Will be set by app.js init to avoid coupling
@@ -63,6 +75,19 @@ window.PR = window.PR || {};
 
   PR.getVoice = function() {
     return PR.voices.find(function(v) { return v.voiceURI === PR.elVoiceSel.value; }) || null;
+  };
+
+  // ---- Apply reading display settings ----
+  PR.applyReadingSettings = function() {
+    var rs = PR.reading;
+    if (rs.fontSize) PR.elText.style.fontSize = rs.fontSize + 'px';
+    if (rs.lineHeight) PR.elText.style.lineHeight = rs.lineHeight;
+    if (rs.padding !== undefined) PR.elText.style.padding = '4px ' + rs.padding + 'px 16px';
+    if (rs.fontFamily && rs.fontFamily !== 'default') {
+      PR.elText.style.fontFamily = rs.fontFamily + ', var(--font)';
+    } else {
+      PR.elText.style.fontFamily = '';
+    }
   };
 
 })(window.PR);

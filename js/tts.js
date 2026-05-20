@@ -26,31 +26,62 @@
     if (!PR.elVoiceSel.value && zh.length) PR.elVoiceSel.value = zh[0].voiceURI;
   };
 
+  // Apply pronunciation dictionary to a text string
+  PR._applyPronDict = function(text) {
+    if (!PR.pronDict || !Object.keys(PR.pronDict).length) return text;
+    var result = text;
+    var entries = Object.keys(PR.pronDict);
+    // Sort by length descending so longer matches take priority
+    entries.sort(function(a, b) { return b.length - a.length; });
+    for (var i = 0; i < entries.length; i++) {
+      var word = entries[i];
+      var pron = PR.pronDict[word];
+      if (!pron) continue;
+      // Simple string replace — for TTS, just substitute the word
+      var escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      var re = new RegExp(escaped, 'g');
+      result = result.replace(re, pron);
+    }
+    return result;
+  };
+
   PR.speakWord = function(index) {
     if (index >= PR.words.length) {
       PR.stopPlayback();
       PR.toast('播放完毕');
       PR.updateProgressUI();
       PR.updateStats();
+      PR._saveProgress();
       if (PR.autoNext) setTimeout(PR.playNextEpisode, 500);
       return;
     }
     if (!PR.isPlaying && PR.currentUtterance === null) return;
 
+    // AB loop: if we've passed loopEnd, jump back to loopStart
+    if (PR.loopAB && PR.words[index] && PR.words[index].charStart >= PR.loopAB.charEnd) {
+      var ls = PR.loopAB.charStart;
+      var li = 0;
+      for (var k = 0; k < PR.words.length; k++) {
+        if (PR.words[k].charEnd > ls) { li = k; break; }
+      }
+      PR.charProgress = ls;
+      PR.wordIndex = li;
+      PR.seekToChar(ls);
+      return;
+    }
+
     PR.wordIndex = index;
     var w = PR.words[index];
-    var speakText = w.text;
+    var speakText = PR._applyPronDict(w.text);
     var speakEnd = w.charEnd;
     var j = index + 1;
-    // Group consecutive words up to ~35 chars, stopping at sentence boundaries
     var MAX_CHARS = 35;
     while (j < PR.words.length && speakText.length + PR.words[j].text.length <= MAX_CHARS) {
-      var nextText = PR.words[j].text;
+      var nextText = PR._applyPronDict(PR.words[j].text);
       speakText += nextText;
       speakEnd = PR.words[j].charEnd;
       j++;
-      // Stop at sentence-ending punctuation for natural pauses
-      if (/[。！？\n]$/.test(nextText)) break;
+      if (/[。！？\n]$/.test(PR.words[j-1].text)) break;
     }
     var wordsInGroup = j - index;
     var utter = new SpeechSynthesisUtterance(speakText);
@@ -58,13 +89,11 @@
     utter.rate = PR.getSpeed();
     utter.lang = utter.voice ? utter.voice.lang : 'zh-CN';
 
-    // Collect the words in this group for timer-based highlighting
     var groupWords = [];
     for (var gi = 0; gi < wordsInGroup; gi++) {
       groupWords.push(PR.words[index + gi]);
     }
 
-    // Estimate utterance duration: ~5 chars/sec at 1x for Chinese
     var cps = PR.getSpeed() * 5;
     var estDurationMs = Math.max(200, speakText.length / cps * 1000);
     var highlightTimer = null;
@@ -79,6 +108,7 @@
       PR.highlightWordRange(tw.charStart, tw.charEnd);
       PR.updateProgressUI();
       PR.updateKaraoke();
+      PR.updateFocusMode();
     };
 
     utter.onstart = function() {
@@ -89,17 +119,9 @@
         if (!PR.isPlaying) return;
         var elapsed = performance.now() - startTime;
         var fraction = Math.min(1, elapsed / estDurationMs);
-        // Map fraction to word index
         var targetIdx = Math.min(groupWords.length - 1, Math.floor(fraction * groupWords.length));
         highlightWord(targetIdx);
       }, 50);
-    };
-
-    // Use onboundary only as a timing recalibration hint (not for highlight)
-    utter.onboundary = function(evt) {
-      if (!highlightTimer || evt.charIndex === undefined) return;
-      // Recalibrate: speech engine reached charIndex within the utterance
-      // Adjust the effective start time so the timer tracks reality
     };
 
     utter.onend = function() {
@@ -107,6 +129,7 @@
       var lw = groupWords[groupWords.length - 1];
       PR.charProgress = lw.charEnd;
       PR.updateProgressUI();
+      PR._saveProgress();
       if (PR.isPlaying) {
         var delay = PR.smartSpeed ? 5 : 30;
         setTimeout(function() { PR.speakWord(index + wordsInGroup); }, delay);

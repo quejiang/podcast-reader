@@ -291,6 +291,65 @@ body{
 }
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
 
+/* ---- OpenDyslexic font-face (lazy loaded via JS) ---- */
+@font-face {
+  font-family: 'OpenDyslexic';
+  src: url('https://cdn.jsdelivr.net/npm/open-dyslexic@1.0.3/otf/OpenDyslexic-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'OpenDyslexic';
+  src: url('https://cdn.jsdelivr.net/npm/open-dyslexic@1.0.3/otf/OpenDyslexic-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'OpenDyslexic';
+  src: url('https://cdn.jsdelivr.net/npm/open-dyslexic@1.0.3/otf/OpenDyslexic-Italic.otf') format('opentype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* ---- Episode tags & progress ---- */
+.ep-card .ep-tags{display:inline-flex;gap:3px;margin-left:6px;vertical-align:middle}
+.ep-tag{
+  display:inline-block;padding:1px 5px;border-radius:4px;font-size:9px;
+  font-weight:500;color:#fff;line-height:1.4;
+}
+.ep-card .ep-progress{
+  display:inline-block;padding:1px 5px;border-radius:4px;font-size:9px;
+  font-weight:600;color:var(--accent);background:var(--accent-glow);
+  margin-left:6px;vertical-align:middle;
+}
+
+/* ---- Settings: tag chips ---- */
+.tag-chip{
+  display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;
+  cursor:pointer;border:1px solid var(--border);transition:all .15s;
+  color:var(--text-dim);
+}
+.tag-chip:hover{border-color:var(--accent);color:var(--text)}
+.tag-chip.active{border-color:var(--accent);color:#fff}
+
+/* ---- Sidebar search & sort ---- */
+#ep-search-wrap input::placeholder{color:var(--text-dim);opacity:.5}
+.ep-sort-opt{transition:color .15s}
+.ep-sort-opt:hover{color:var(--accent)!important}
+
+/* ---- AB Loop indicator on progress bar ---- */
+#progress-bar.loop-active{border:2px solid var(--accent)}
+
+/* ---- Modal z-index: above tutorial (200→500) ---- */
+#modal-overlay{z-index:500}
+
+/* ---- Undo delete ---- */
+#undo-delete{color:var(--play)!important;cursor:pointer;text-decoration:underline}
+#undo-delete:hover{opacity:.8}
+
 @media (max-width:700px){
   /* ---- Mobile-first layout ---- */
   #sidebar{position:fixed;left:0;top:0;bottom:0;z-index:50;width:280px}

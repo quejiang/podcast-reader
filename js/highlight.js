@@ -7,7 +7,6 @@
   PR.buildWords = function(text) {
     if (!text || !text.trim()) return [];
     var result = [];
-    // Chinese(1-15 chars) + optional trailing punctuation | English word | newline | whitespace | standalone punct
     var re = /([\u4e00-\u9fff\u3400-\u4dbf]{1,15}[。！？，；：、\n]?|[a-zA-Z0-9]+|[^\S\n]+|\n+|[^\u4e00-\u9fff\u3400-\u4dbfa-zA-Z0-9\s])/g;
     var m;
     while ((m = re.exec(text)) !== null) {
@@ -70,8 +69,13 @@
       node.parentNode.replaceChild(f, node);
     }
 
-    var fm = PR.elText.querySelector('mark');
-    if (fm) fm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // Auto-scroll: smoothly scroll highlighted word into view
+    if (PR.reading.autoScroll !== false) {
+      var fm = PR.elText.querySelector('mark');
+      if (fm) {
+        fm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
   };
 
 })(window.PR);
