@@ -522,11 +522,6 @@
     // Close any open tutorial so guide is visible
     var tutOverlay = PR.$('#tutorial-overlay');
     if (tutOverlay) tutOverlay.classList.remove('show');
-    if (!PR.elModal || !PR.elModalOverlay) {
-      console.error('[install] modal elements missing', !!PR.elModal, !!PR.elModalOverlay);
-      alert('安装指引：请用 Chrome/Edge 打开本页面，然后点击地址栏右侧的安装图标。');
-      return;
-    }
 
     var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     var isSafari = /Safari/.test(navigator.userAgent) && !/CriOS|FxiOS|OPiOS|mercury|Edg/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
@@ -538,82 +533,34 @@
 
     var steps = '';
     if (isIOS && isSafari) {
-      // iPhone / iPad Safari
-      steps =
-        '<div style="text-align:center;font-size:40px;margin-bottom:8px">📱 🍎</div>' +
-        '<h3 style="text-align:center">iPhone / iPad 安装</h3>' +
-        '<div style="font-size:13px;line-height:2;margin:12px 0;color:var(--text)">' +
-          '<strong>1.</strong> 点底部 <strong>⎋ 分享</strong>（方框+箭头）<br>' +
-          '<strong>2.</strong> 往下滑，点 <strong>「添加到主屏幕」</strong><br>' +
-          '<strong>3.</strong> 点右上角 <strong>「添加」</strong><br>' +
-          '<strong>4.</strong> 桌面点 🎧 图标打开<br><br>' +
-          '<small style="color:var(--text-dim)">⚠️ 必须用 Safari 打开，微信/QQ 不支持</small>' +
-        '</div>';
+      steps = 'iPhone / iPad 安装步骤：\n\n1. 点底部「分享」按钮\n2. 往下滑，点「添加到主屏幕」\n3. 点右上角「添加」\n\n⚠️ 必须用 Safari 打开';
     } else if (isDesktop && isChrome) {
-      // Desktop Chrome
-      steps =
-        '<div style="text-align:center;font-size:40px;margin-bottom:8px">💻 ⬇️</div>' +
-        '<h3 style="text-align:center">Chrome 桌面安装</h3>' +
-        '<div style="font-size:13px;line-height:2;margin:12px 0;color:var(--text)">' +
-          '地址栏最右侧点 <strong>⬇️ 安装图标</strong><br>' +
-          '（一个带加号的显示器图标）<br><br>' +
-          '或点右上角 <strong>⋮</strong> →<br>' +
-          '<strong>「安装磨耳朵…」</strong><br><br>' +
-          '<small style="color:var(--text-dim)">如果看不到安装选项，刷新页面后再试</small>' +
-        '</div>';
+      steps = 'Chrome 安装步骤：\n\n地址栏最右侧点「安装」图标\n或点右上角 ⋮ →「安装磨耳朵…」';
     } else if (isDesktop && isEdge) {
-      // Desktop Edge
-      steps =
-        '<div style="text-align:center;font-size:40px;margin-bottom:8px">💻 ⬇️</div>' +
-        '<h3 style="text-align:center">Edge 桌面安装</h3>' +
-        '<div style="font-size:13px;line-height:2;margin:12px 0;color:var(--text)">' +
-          '地址栏右侧点 <strong>⬇️ 安装图标</strong><br>' +
-          '或点右上角 <strong>…</strong> →<br>' +
-          '<strong>「应用」→「安装此站点」</strong><br><br>' +
-          '<small style="color:var(--text-dim)">安装后可在程序坞/任务栏快速打开</small>' +
-        '</div>';
+      steps = 'Edge 安装步骤：\n\n地址栏右侧点「安装」图标\n或点右上角 … →「应用」→「安装此站点」';
     } else if (isDesktop && isSafari) {
-      // Desktop Safari — macOS Sonoma+ only
-      steps =
-        '<div style="text-align:center;font-size:40px;margin-bottom:8px">💻 🍎</div>' +
-        '<h3 style="text-align:center">Safari 桌面安装</h3>' +
-        '<div style="font-size:13px;line-height:2;margin:12px 0;color:var(--text)">' +
-          (isMac
-            ? '<strong>macOS Sonoma / Sequoia：</strong><br>菜单栏 <strong>「文件」→「添加到程序坞…」</strong><br><br>' +
-              '<strong>旧版 macOS：</strong>不支持 Safari PWA<br>建议用 Chrome 或 Edge 打开本页<br><br>' +
-              '<small style="color:var(--text-dim)">或点击地址栏的分享按钮</small>'
-            : '<strong>Windows Safari：</strong>不支持 PWA<br>建议用 Chrome 或 Edge 打开本页') +
-        '</div>';
+      steps = isMac ? 'Safari 安装：\n菜单栏「文件」→「添加到程序坞…」\n(需 macOS Sonoma 或更新版本)\n\n旧版 macOS 建议用 Chrome 打开' : '建议用 Chrome 或 Edge 打开本页面安装';
     } else if (isAndroid && (isChrome || isEdge)) {
-      // Android Chrome / Edge
-      steps =
-        '<div style="text-align:center;font-size:40px;margin-bottom:8px">📱 🤖</div>' +
-        '<h3 style="text-align:center">Android 安装</h3>' +
-        '<div style="font-size:13px;line-height:2;margin:12px 0;color:var(--text)">' +
-          '<strong>方法一：</strong>地址栏下方弹窗 → 点 <strong>「安装」</strong><br><br>' +
-          '<strong>方法二：</strong>点右上角 <strong>⋮</strong> →<br><strong>「添加到主屏幕」</strong><br><br>' +
-          '<small style="color:var(--text-dim)">安装后长按桌面图标可快捷新建朗读</small>' +
-        '</div>';
+      steps = 'Android 安装：\n\n方法一：地址栏下方弹窗 →「安装」\n方法二：右上 ⋮ →「添加到主屏幕」';
     } else {
-      // Generic fallback
-      steps =
-        '<div style="text-align:center;font-size:40px;margin-bottom:8px">📲</div>' +
-        '<h3 style="text-align:center">安装到桌面</h3>' +
-        '<div style="font-size:13px;line-height:2;margin:12px 0;color:var(--text)">' +
-          '<strong>iPhone：</strong>Safari → 分享 ⎋ → 添加到主屏幕<br><br>' +
-          '<strong>Android：</strong>Chrome → ⋮ → 添加到主屏幕<br><br>' +
-          '<strong>电脑 Chrome/Edge：</strong>地址栏右侧点安装图标<br><br>' +
-          '<strong>电脑 Safari：</strong>文件 → 添加到程序坞<br><br>' +
-          '<small style="color:var(--text-dim)">安装后可离线使用，锁屏播放不中断</small>' +
-        '</div>';
+      steps = '安装到桌面：\n\niPhone: Safari → 分享 → 添加到主屏幕\nAndroid: Chrome → ⋮ → 添加到主屏幕\n电脑 Chrome/Edge: 地址栏右侧点安装图标';
     }
 
-    PR.elModal.innerHTML =
-      steps +
-      '<button class="secondary" id="btn-close-modal" style="width:100%;margin-top:8px">关闭</button>';
-    PR.elModalOverlay.classList.add('show');
-    PR.$('#btn-close-modal').addEventListener('click', function() { PR.elModalOverlay.classList.remove('show'); });
-    console.log('[install] modal shown');
+    // Try modal first, fall back to alert
+    if (PR.elModal && PR.elModalOverlay) {
+      PR.elModal.innerHTML =
+        '<div style="text-align:center;font-size:40px;margin-bottom:8px">📲</div>' +
+        '<h3 style="text-align:center">安装到桌面</h3>' +
+        '<div style="font-size:14px;line-height:2;margin:12px 0;color:var(--text);white-space:pre-line">' + PR.esc(steps) + '</div>' +
+        '<button class="secondary" id="btn-close-modal" style="width:100%;margin-top:8px">关闭</button>';
+      PR.elModalOverlay.classList.add('show');
+      var btnClose = PR.$('#btn-close-modal');
+      if (btnClose) btnClose.addEventListener('click', function() { PR.elModalOverlay.classList.remove('show'); });
+      console.log('[install] modal shown');
+    } else {
+      alert(steps);
+      console.log('[install] alert shown (modal unavailable)');
+    }
   };
 
 })(window.PR);
