@@ -109,19 +109,28 @@
 
   // PWA Install button — works across all browsers
   PR.elBtnInstall.addEventListener('click', function() {
+    // Try native PWA install prompt (Chrome/Edge desktop & Android)
     if (window._pwa) {
-      // Chrome / Edge: trigger native PWA install prompt
-      window._pwa.prompt();
-      window._pwa.userChoice.then(function(r) {
-        if (r.outcome === 'accepted') {
-          PR.elBtnInstall.style.display = 'none';
-          PR.toast('安装成功！');
-        }
-      });
-    } else {
-      // Safari / other browsers: show step-by-step guide
-      PR.showInstallGuide();
+      try {
+        window._pwa.prompt();
+        window._pwa.userChoice.then(function(r) {
+          if (r.outcome === 'accepted') {
+            PR.elBtnInstall.style.display = 'none';
+            PR.toast('安装成功！');
+          }
+        }).catch(function() {
+          // prompt rejected or dismissed — show manual guide
+          PR.showInstallGuide();
+        });
+      } catch(e) {
+        // prompt() threw — browser doesn't actually support it
+        PR.showInstallGuide();
+      }
+      return;
     }
+
+    // No native prompt available — browser-specific guide
+    PR.showInstallGuide();
   });
 
   PR.elBtnAutoNext.addEventListener('click', function() {

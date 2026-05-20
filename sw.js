@@ -1,8 +1,10 @@
-const CACHE = 'podcast-reader-v3';
+const CACHE = 'podcast-reader-v4';
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
+  './icon-192.png',
+  './icon-512.png',
   './css/style.css',
   './js/state.js',
   './js/storage.js',

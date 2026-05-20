@@ -518,41 +518,82 @@
 
   // ---- PWA Install Guide (cross-browser) ----
   PR.showInstallGuide = function() {
-    var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && /Safari/.test(navigator.userAgent) && !/CriOS|FxiOS|OPiOS|mercury/.test(navigator.userAgent);
-    var isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+    var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    var isSafari = /Safari/.test(navigator.userAgent) && !/CriOS|FxiOS|OPiOS|mercury|Edg/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+    var isChrome = /Chrome/.test(navigator.userAgent) && !/Edg/.test(navigator.userAgent);
     var isEdge = /Edg/.test(navigator.userAgent);
-    var isFirefox = /Firefox/.test(navigator.userAgent);
     var isAndroid = /Android/.test(navigator.userAgent);
+    var isDesktop = !isIOS && !isAndroid;
+    var isMac = /Macintosh|Mac OS X/.test(navigator.userAgent);
 
     var steps = '';
-    if (isIOS) {
+    if (isIOS && isSafari) {
+      // iPhone / iPad Safari
       steps =
-        '<div style="text-align:center;font-size:40px;margin-bottom:8px">📱 + 🍎</div>' +
-        '<h3 style="text-align:center">iPhone / iPad 安装教程</h3>' +
+        '<div style="text-align:center;font-size:40px;margin-bottom:8px">📱 🍎</div>' +
+        '<h3 style="text-align:center">iPhone / iPad 安装</h3>' +
         '<div style="font-size:13px;line-height:2;margin:12px 0;color:var(--text)">' +
-          '<strong>第 1 步：</strong>点底部中间 <strong>⎋ 分享按钮</strong>（方框+箭头）<br>' +
-          '<strong>第 2 步：</strong>往下滑菜单，找到<br><strong>「添加到主屏幕」</strong><br>' +
-          '<strong>第 3 步：</strong>点右上角 <strong>「添加」</strong><br>' +
-          '<strong>第 4 步：</strong>回到桌面，点 🎧 图标打开<br><br>' +
-          '<small style="color:var(--text-dim)">⚠️ 必须用 Safari 打开这个网页<br>微信/QQ 内置浏览器不支持安装</small>' +
+          '<strong>1.</strong> 点底部 <strong>⎋ 分享</strong>（方框+箭头）<br>' +
+          '<strong>2.</strong> 往下滑，点 <strong>「添加到主屏幕」</strong><br>' +
+          '<strong>3.</strong> 点右上角 <strong>「添加」</strong><br>' +
+          '<strong>4.</strong> 桌面点 🎧 图标打开<br><br>' +
+          '<small style="color:var(--text-dim)">⚠️ 必须用 Safari 打开，微信/QQ 不支持</small>' +
+        '</div>';
+    } else if (isDesktop && isChrome) {
+      // Desktop Chrome
+      steps =
+        '<div style="text-align:center;font-size:40px;margin-bottom:8px">💻 ⬇️</div>' +
+        '<h3 style="text-align:center">Chrome 桌面安装</h3>' +
+        '<div style="font-size:13px;line-height:2;margin:12px 0;color:var(--text)">' +
+          '地址栏最右侧点 <strong>⬇️ 安装图标</strong><br>' +
+          '（一个带加号的显示器图标）<br><br>' +
+          '或点右上角 <strong>⋮</strong> →<br>' +
+          '<strong>「安装磨耳朵…」</strong><br><br>' +
+          '<small style="color:var(--text-dim)">如果看不到安装选项，刷新页面后再试</small>' +
+        '</div>';
+    } else if (isDesktop && isEdge) {
+      // Desktop Edge
+      steps =
+        '<div style="text-align:center;font-size:40px;margin-bottom:8px">💻 ⬇️</div>' +
+        '<h3 style="text-align:center">Edge 桌面安装</h3>' +
+        '<div style="font-size:13px;line-height:2;margin:12px 0;color:var(--text)">' +
+          '地址栏右侧点 <strong>⬇️ 安装图标</strong><br>' +
+          '或点右上角 <strong>…</strong> →<br>' +
+          '<strong>「应用」→「安装此站点」</strong><br><br>' +
+          '<small style="color:var(--text-dim)">安装后可在程序坞/任务栏快速打开</small>' +
+        '</div>';
+    } else if (isDesktop && isSafari) {
+      // Desktop Safari — macOS Sonoma+ only
+      steps =
+        '<div style="text-align:center;font-size:40px;margin-bottom:8px">💻 🍎</div>' +
+        '<h3 style="text-align:center">Safari 桌面安装</h3>' +
+        '<div style="font-size:13px;line-height:2;margin:12px 0;color:var(--text)">' +
+          (isMac
+            ? '<strong>macOS Sonoma / Sequoia：</strong><br>菜单栏 <strong>「文件」→「添加到程序坞…」</strong><br><br>' +
+              '<strong>旧版 macOS：</strong>不支持 Safari PWA<br>建议用 Chrome 或 Edge 打开本页<br><br>' +
+              '<small style="color:var(--text-dim)">或点击地址栏的分享按钮</small>'
+            : '<strong>Windows Safari：</strong>不支持 PWA<br>建议用 Chrome 或 Edge 打开本页') +
         '</div>';
     } else if (isAndroid && (isChrome || isEdge)) {
+      // Android Chrome / Edge
       steps =
-        '<div style="text-align:center;font-size:40px;margin-bottom:8px">📱 + 🤖</div>' +
-        '<h3 style="text-align:center">Android 安装教程</h3>' +
+        '<div style="text-align:center;font-size:40px;margin-bottom:8px">📱 🤖</div>' +
+        '<h3 style="text-align:center">Android 安装</h3>' +
         '<div style="font-size:13px;line-height:2;margin:12px 0;color:var(--text)">' +
           '<strong>方法一：</strong>地址栏下方弹窗 → 点 <strong>「安装」</strong><br><br>' +
           '<strong>方法二：</strong>点右上角 <strong>⋮</strong> →<br><strong>「添加到主屏幕」</strong><br><br>' +
           '<small style="color:var(--text-dim)">安装后长按桌面图标可快捷新建朗读</small>' +
         '</div>';
     } else {
+      // Generic fallback
       steps =
         '<div style="text-align:center;font-size:40px;margin-bottom:8px">📲</div>' +
         '<h3 style="text-align:center">安装到桌面</h3>' +
         '<div style="font-size:13px;line-height:2;margin:12px 0;color:var(--text)">' +
           '<strong>iPhone：</strong>Safari → 分享 ⎋ → 添加到主屏幕<br><br>' +
           '<strong>Android：</strong>Chrome → ⋮ → 添加到主屏幕<br><br>' +
-          '<strong>电脑：</strong>Chrome/Edge 地址栏右侧点安装图标<br><br>' +
+          '<strong>电脑 Chrome/Edge：</strong>地址栏右侧点安装图标<br><br>' +
+          '<strong>电脑 Safari：</strong>文件 → 添加到程序坞<br><br>' +
           '<small style="color:var(--text-dim)">安装后可离线使用，锁屏播放不中断</small>' +
         '</div>';
     }
