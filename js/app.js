@@ -108,6 +108,7 @@
   });
 
   // PWA Install button — works across all browsers
+  if (PR.elBtnInstall) {
   PR.elBtnInstall.addEventListener('click', function() {
     // Try native PWA install prompt (Chrome/Edge desktop & Android)
     if (window._pwa) {
@@ -132,6 +133,7 @@
     // No native prompt available — browser-specific guide
     PR.showInstallGuide();
   });
+  }
 
   PR.elBtnAutoNext.addEventListener('click', function() {
     PR.autoNext = !PR.autoNext;

@@ -20,7 +20,7 @@ body{
 #topbar{
   display:flex;align-items:center;gap:8px;padding:6px 14px;
   background:var(--surface);border-bottom:1px solid var(--border);
-  flex-shrink:0;z-index:10;transition:background .3s;flex-wrap:wrap;
+  flex-shrink:0;z-index:500;transition:background .3s;flex-wrap:wrap;
 }
 #topbar .logo{font-size:17px;font-weight:700;letter-spacing:-.5px;color:var(--accent);white-space:nowrap}
 #topbar .logo span{color:var(--text-dim);font-weight:400}
