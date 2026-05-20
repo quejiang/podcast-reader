@@ -33,9 +33,16 @@
       if (cb) cb(PR.edgeTTS.cachedVoices);
       return;
     }
-    var url = 'https://speech.platform.bing.com/consumer/speech/synthesize/readaloud/voices/list?trustedclienttoken=6A5AA1D4EAFF4E9FB37E23D68491D6F4';
-    fetch(url).then(function(r) { return r.json(); })
+    var url = 'https://speech.platform.bing.com/consumer/speech/synthesize/readaloud/voices/list?trustedclienttoken=' + PR.edgeTTS.token;
+    fetch(url).then(function(r) {
+        if (r.status === 401 || r.status === 403) {
+          PR.edgeTTS.tokenValid = false;
+          throw new Error('token_invalid');
+        }
+        return r.json();
+      })
       .then(function(data) {
+        PR.edgeTTS.tokenValid = true;
         PR.edgeTTS.cachedVoices = data.map(function(v, i) {
           return {
             name: v.FriendlyName + ' (' + v.Locale + ')',
@@ -48,6 +55,7 @@
         if (cb) cb(PR.edgeTTS.cachedVoices);
       })
       .catch(function() {
+        PR.edgeTTS.tokenValid = false;
         // Restore fallback list - don't set to empty
         PR.edgeTTS.cachedVoices = PR.edgeVoices.slice();
         if (cb) cb(PR.edgeTTS.cachedVoices);

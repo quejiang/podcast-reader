@@ -51,12 +51,23 @@
 
   // ---- Episodes ----
   PR.loadEpisodes = function() {
-    try { PR.episodes = JSON.parse(localStorage.getItem('pr-episodes') || '[]'); }
-    catch(e) { PR.episodes = []; }
+    // Try IndexedDB first; fall back to localStorage
+    if (typeof PR.loadEpisodesIDB === 'function') {
+      PR.loadEpisodesIDB().then(function() {
+        PR.renderEpisodeList();
+      });
+    } else {
+      try { PR.episodes = JSON.parse(localStorage.getItem('pr-episodes') || '[]'); }
+      catch(e) { PR.episodes = []; }
+    }
   };
 
   PR.saveEpisodes = function() {
-    localStorage.setItem('pr-episodes', JSON.stringify(PR.episodes));
+    if (typeof PR.saveEpisodesIDB === 'function') {
+      PR.saveEpisodesIDB();
+    } else {
+      localStorage.setItem('pr-episodes', JSON.stringify(PR.episodes));
+    }
   };
 
   // ---- Draft ----

@@ -1,0 +1,14 @@
+{
+  "name": "podcast-reader",
+  "version": "3.4.0",
+  "description": "磨耳朵 · Podcast Reader — 文字转语音播客 PWA",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/build.js",
+    "test": "echo 'Open tests/test.html in a browser to run tests' && exit 0"
+  },
+  "devDependencies": {
+    "clean-css-cli": "^5.6.3",
+    "terser": "^5.31.0"
+  }
+}

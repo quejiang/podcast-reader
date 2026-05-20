@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>磨耳朵 · 单元测试</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background: #1a1a2e; color: #e0e0e0; }
+  h1 { color: #f08060; }
+  h2 { color: #6090d0; margin-top: 24px; }
+  .result { padding: 6px 12px; margin: 4px 0; border-radius: 4px; font-size: 14px; }
+  .pass { background: #1a3a1a; color: #60d0a0; }
+  .fail { background: #3a1a1a; color: #f06060; }
+  .summary { margin-top: 16px; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 18px; }
+  .summary.all-pass { background: #1a3a1a; color: #60d0a0; }
+  .summary.has-fail { background: #3a1a1a; color: #f06060; }
+</style>
+</head>
+<body>
+<h1>🧪 磨耳朵 · 单元测试</h1>
+<div id="results"></div>
+<div id="summary" class="summary"></div>
+
+<script src="../js/state.js"></script>
+<script src="../js/i18n.js"></script>
+<script src="../js/highlight.js"></script>
+
+<script>
+'use strict';
+
+var passCount = 0, failCount = 0;
+var resultsEl = document.getElementById('results');
+var summaryEl = document.getElementById('summary');
+
+function assert(cond, msg) {
+  var el = document.createElement('div');
+  if (cond) {
+    passCount++;
+    el.className = 'result pass';
+    el.textContent = '✅ ' + msg;
+  } else {
+    failCount++;
+    el.className = 'result fail';
+    el.textContent = '❌ ' + msg;
+  }
+  resultsEl.appendChild(el);
+}
+
+function section(title) {
+  var el = document.createElement('h2');
+  el.textContent = title;
+  resultsEl.appendChild(el);
+}
+
+function showSummary() {
+  if (failCount === 0) {
+    summaryEl.className = 'summary all-pass';
+    summaryEl.textContent = '全部通过！' + passCount + ' 项测试全部成功。';
+  } else {
+    summaryEl.className = 'summary has-fail';
+    summaryEl.textContent = passCount + ' 通过 / ' + failCount + ' 失败（共 ' + (passCount + failCount) + ' 项）';
+  }
+}
+
+// ===== state.js tests =====
+section('state.js');
+
+assert(typeof PR.$ === 'function', 'PR.$ 是函数');
+assert(typeof PR.$$ === 'function', 'PR.$$ 是函数');
+assert(typeof PR.esc === 'function', 'PR.esc 是函数');
+assert(typeof PR.charCount === 'function', 'PR.charCount 是函数');
+assert(typeof PR.formatTime === 'function', 'PR.formatTime 是函数');
+assert(typeof PR.getSpeed === 'function', 'PR.getSpeed 是函数');
+
+// formatTime
+assert(PR.formatTime(0) === '00:00', 'formatTime(0) → "00:00"');
+assert(PR.formatTime(65) === '01:05', 'formatTime(65) → "01:05"');
+assert(PR.formatTime(3661) === '61:01', 'formatTime(3661) → "61:01"');
+assert(PR.formatTime(-1) === '--:--', 'formatTime(-1) → "--:--"');
+assert(PR.formatTime(NaN) === '--:--', 'formatTime(NaN) → "--:--"');
+
+// charCount
+assert(PR.charCount('你好世界') === '4 字', 'charCount 短文本 → "4 字"');
+assert(PR.charCount(Array(501).join('a')) === '0.5k 字', 'charCount 500字 → "0.5k 字"');
+assert(PR.charCount(Array(10001).join('a')) === '1.0w 字', 'charCount 1万字 → "1.0w 字"');
+
+// esc (XSS prevention)
+var dangerous = '<script>alert("xss")</script>';
+var escaped = PR.esc(dangerous);
+assert(escaped.indexOf('<script>') === -1, 'esc 防止 XSS — script 标签被转义');
+assert(escaped.indexOf('&lt;script&gt;') >= 0, 'esc 正确输出转义后的 script 标签');
+
+// ===== highlight.js tests =====
+section('highlight.js');
+
+assert(typeof PR.buildWords === 'function', 'PR.buildWords 是函数');
+assert(typeof PR.resetWords === 'function', 'PR.resetWords 是函数');
+
+// buildWords
+var words = PR.buildWords('你好世界。Hello world。');
+assert(words.length > 0, 'buildWords 中英混合生成词列表');
+assert(words.some(function(w) { return /你好/.test(w.text); }), 'buildWords 识别中文词"你好"');
+assert(words.some(function(w) { return w.text === 'Hello'; }), 'buildWords 识别英文词"Hello"');
+
+// Chinese punctuation split
+var words2 = PR.buildWords('第一句。第二句！第三句？');
+assert(words2.some(function(w) { return w.text.indexOf('。') >= 0; }), 'buildWords 保留中文句号');
+assert(words2.some(function(w) { return w.text.indexOf('！') >= 0; }), 'buildWords 保留中文感叹号');
+
+// Empty / whitespace
+var emptyWords = PR.buildWords('');
+assert(emptyWords.length === 0, 'buildWords 空字符串 → []');
+var spaceWords = PR.buildWords('   ');
+assert(spaceWords.length === 0, 'buildWords 纯空格 → []');
+
+// char offsets
+var words3 = PR.buildWords('AB 你好');
+assert(words3.length >= 3, 'buildWords 混合文本生成足够词条');
+assert(words3[0].text === 'AB', 'buildWords 第一个词 "AB"');
+assert(words3[0].charStart === 0, 'buildWords 第一个词 charStart=0');
+assert(words3[words3.length - 1].charEnd === 'AB 你好'.length, 'buildWords 最后一个词 charEnd 正确');
+
+// ===== i18n.js tests =====
+section('i18n.js');
+
+assert(typeof PR.t === 'function', 'PR.t 是函数');
+assert(PR.t('play') === '播放', 'PR.t("play") → "播放" (zh-CN)');
+assert(PR.t('nonexistent_key') === 'nonexistent_key', 'PR.t 不存在的 key 返回 key 本身');
+
+PR.locale = 'en';
+assert(PR.t('play') === 'Play', 'PR.t("play") → "Play" (English)');
+PR.locale = 'zh-CN'; // reset
+
+// ===== Edge TTS pron dict tests =====
+section('发音词典 (pronDict)');
+
+PR.pronDict = { 'zhí': 'zhi', 'ABC': 'abc' };
+assert(typeof PR._buildPronReplacements === 'function', 'PR._buildPronReplacements 是函数');
+
+var reps = PR._buildPronReplacements('读zhí这个字');
+assert(reps.length === 1, '_buildPronReplacements 找到1个替换');
+assert(reps[0].marker === 'zhí', '_buildPronReplacements marker 正确');
+assert(reps[0].replace === 'zhi', '_buildPronReplacements replace 正确');
+
+// Multiple matches
+var reps2 = PR._buildPronReplacements('zhí和zhí不同');
+assert(reps2.length === 2, '_buildPronReplacements 找到2个匹配');
+
+// No match
+var reps3 = PR._buildPronReplacements('没有匹配的词');
+assert(reps3.length === 0, '_buildPronReplacements 无匹配 → 空数组');
+
+// Cleanup
+PR.pronDict = {};
+
+// ===== Bookmarks logic tests =====
+section('书签 (bookmarks)');
+
+// Test that bookmarks array exists and is sorted
+PR.bookmarks = [
+  { charPos: 100, label: 'mid', id: 'b1' },
+  { charPos: 10, label: 'start', id: 'b2' },
+  { charPos: 200, label: 'end', id: 'b3' }
+];
+PR.bookmarks.sort(function(a, b) { return a.charPos - b.charPos; });
+assert(PR.bookmarks[0].charPos === 10, '书签按位置排序: 第一个 charPos=10');
+assert(PR.bookmarks[2].charPos === 200, '书签按位置排序: 最后一个 charPos=200');
+
+// ===== Summary =====
+showSummary();
+document.title = (failCount === 0 ? '✅ ' : '❌ ') + passCount + '/' + (passCount + failCount) + ' 通过 · 磨耳朵测试';
+</script>
+</body>
+</html>

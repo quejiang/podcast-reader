@@ -153,8 +153,47 @@
     });
   };
 
-  // MP3 Export
+  // MP3 Export — supports AI blobs, Edge TTS background synthesis, and system fallback
   PR.exportMp3 = async function() {
+    // If already have AI blobs from playback, export them directly
+    if (PR.aiAudioBlobs && PR.aiAudioBlobs.length) {
+      var blob = new Blob(PR.aiAudioBlobs, { type: 'audio/mpeg' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = (PR.elTitle.value.trim() || '播客导出') + '.mp3';
+      a.click();
+      URL.revokeObjectURL(url);
+      PR.toast('MP3 已导出（已播放部分）');
+      return;
+    }
+
+    // Edge TTS: synthesize entire text in the background (free, no API key needed)
+    var cfg = PR.loadAiConfig();
+    if (cfg.mode === 'edge') {
+      var text = PR.elText.textContent || '';
+      if (!text.trim()) { PR.toast('请先输入文字内容'); return; }
+
+      PR.toast('正在合成音频…（可能需要几分钟）', 60000);
+      if (typeof PR.showLoading === 'function') PR.showLoading('正在后台合成音频…');
+      try {
+        var exportBlob = await PR.fetchEdgeAudio(text);
+        if (typeof PR.hideLoading === 'function') PR.hideLoading();
+        var url2 = URL.createObjectURL(exportBlob);
+        var a2 = document.createElement('a');
+        a2.href = url2;
+        a2.download = (PR.elTitle.value.trim() || '播客导出') + '.mp3';
+        a2.click();
+        URL.revokeObjectURL(url2);
+        PR.toast('MP3 已导出');
+      } catch(e) {
+        if (typeof PR.hideLoading === 'function') PR.hideLoading();
+        PR.toast('导出失败: ' + e.message, 4000);
+      }
+      return;
+    }
+
+    // Non-AI and non-Edge: cannot export directly
     if (!PR.aiMode) {
       PR.toast('MP3 导出需要 AI 语音模式。请在设置中切换。');
       return;
@@ -167,13 +206,13 @@
       PR.pausePlayback();
       PR.toast('已暂停，正在导出已播放部分…');
     }
-    var blob = new Blob(PR.aiAudioBlobs, { type: 'audio/mpeg' });
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url;
-    a.download = (PR.elTitle.value.trim() || '播客导出') + '.mp3';
-    a.click();
-    URL.revokeObjectURL(url);
+    var blob2 = new Blob(PR.aiAudioBlobs, { type: 'audio/mpeg' });
+    var url3 = URL.createObjectURL(blob2);
+    var a3 = document.createElement('a');
+    a3.href = url3;
+    a3.download = (PR.elTitle.value.trim() || '播客导出') + '.mp3';
+    a3.click();
+    URL.revokeObjectURL(url3);
     PR.toast('MP3 已导出');
   };
 

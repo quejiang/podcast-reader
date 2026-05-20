@@ -192,12 +192,43 @@
     });
   });
 
-  // Progress bar click-to-seek
-  PR.elProgressBar.addEventListener('click', function(e) {
-    if (!PR.totalChars) return;
-    var r = e.currentTarget.getBoundingClientRect();
-    PR.seekToChar(Math.round((e.clientX - r.left) / r.width * PR.totalChars));
-  });
+  // Progress bar drag-to-seek (supports both mouse and touch)
+  (function() {
+    var dragging = false;
+
+    var seekFromEvent = function(e) {
+      if (!PR.totalChars) return;
+      var r = PR.elProgressBar.getBoundingClientRect();
+      var x = e.touches ? e.touches[0].clientX : e.clientX;
+      var pct = Math.max(0, Math.min(1, (x - r.left) / r.width));
+      PR.seekToChar(Math.round(pct * PR.totalChars));
+    };
+
+    PR.elProgressBar.addEventListener('mousedown', function(e) {
+      dragging = true;
+      seekFromEvent(e);
+      e.preventDefault();
+    });
+
+    PR.elProgressBar.addEventListener('touchstart', function(e) {
+      dragging = true;
+      seekFromEvent(e);
+      e.preventDefault();
+    }, { passive: false });
+
+    document.addEventListener('mousemove', function(e) {
+      if (!dragging) return;
+      seekFromEvent(e);
+    });
+
+    document.addEventListener('touchmove', function(e) {
+      if (!dragging) return;
+      seekFromEvent(e);
+    }, { passive: false });
+
+    document.addEventListener('mouseup', function() { dragging = false; });
+    document.addEventListener('touchend', function() { dragging = false; });
+  })();
 
   PR.elVoiceSel.addEventListener('change', PR.saveSettings);
 
@@ -249,6 +280,7 @@
     if (!PR.totalChars) return;
     if (!PR.loopAB) PR.loopAB = { charStart: PR.charProgress, charEnd: PR.totalChars };
     else PR.loopAB.charStart = PR.charProgress;
+    PR.renderBookmarkDots();
     PR.toast('A-B 循环起点已设置');
   };
 
@@ -256,11 +288,13 @@
     if (!PR.totalChars) return;
     if (!PR.loopAB) PR.loopAB = { charStart: 0, charEnd: PR.charProgress };
     else PR.loopAB.charEnd = PR.charProgress;
+    PR.renderBookmarkDots();
     PR.toast('A-B 循环终点已设置（按 \\ 取消）');
   };
 
   PR._clearABLoop = function() {
     PR.loopAB = null;
+    PR.renderBookmarkDots();
     PR.toast('A-B 循环已取消');
   };
 
@@ -450,8 +484,15 @@
 
   if (!PR.elText.textContent.trim() && !PR.episodes.length) setTimeout(function() { PR.elText.focus(); }, 300);
 
-  console.log('🎧 磨耳朵 v3.3 已就绪');
-  console.log('  显示设置 | 发音词典 | 全文搜索 | 标签 | AB循环 | 回退续播 | 撤销删除');
-  console.log('  WebDAV同步 | ARIA无障碍 | OpenDyslexic | 阅读进度');
+  // PDF.js worker init — set once at startup
+  if (typeof pdfjsLib !== 'undefined') {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+
+  // IndexedDB migration
+  if (typeof PR.migrateToIDB === 'function') PR.migrateToIDB();
+
+  console.log('🎧 磨耳朵 v' + PR.version + ' 已就绪');
+  console.log('  显示设置 | 发音词典 | 全文搜索 | 标签 | AB循环 | 回退续播 | 撤销删除 | IndexedDB');
 
 })(window.PR);

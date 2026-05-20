@@ -36,6 +36,36 @@
       d.addEventListener('click', function(e) { e.stopPropagation(); PR.seekToChar(bm.charPos); });
       c.appendChild(d);
     });
+    PR._renderABLoopMarks(c);
+  };
+
+  // AB loop visual indicators on progress bar
+  PR._renderABLoopMarks = function(container) {
+    if (!PR.loopAB || PR.loopAB.charStart < 0 || PR.loopAB.charEnd <= PR.loopAB.charStart || !PR.totalChars) return;
+    var leftPct = PR.loopAB.charStart / PR.totalChars * 100;
+    var rightPct = PR.loopAB.charEnd / PR.totalChars * 100;
+
+    // Loop region highlight
+    var region = document.createElement('div');
+    region.style.cssText = 'position:absolute;left:' + leftPct + '%;width:' + (rightPct - leftPct) +
+      '%;top:0;height:100%;background:var(--accent);opacity:0.3;pointer-events:none;z-index:1;border-radius:2px';
+    container.appendChild(region);
+
+    // A marker
+    var markA = document.createElement('div');
+    markA.textContent = 'A';
+    markA.title = 'A-B 循环起点';
+    markA.style.cssText = 'position:absolute;left:' + leftPct + '%;top:-10px;transform:translateX(-50%);' +
+      'font-size:9px;color:var(--accent);font-weight:bold;z-index:2;pointer-events:none';
+    container.appendChild(markA);
+
+    // B marker
+    var markB = document.createElement('div');
+    markB.textContent = 'B';
+    markB.title = 'A-B 循环终点';
+    markB.style.cssText = 'position:absolute;left:' + rightPct + '%;top:-10px;transform:translateX(-50%);' +
+      'font-size:9px;color:var(--accent);font-weight:bold;z-index:2;pointer-events:none';
+    container.appendChild(markB);
   };
 
   PR.showBookmarkPanel = function() {

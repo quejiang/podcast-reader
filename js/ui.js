@@ -385,7 +385,7 @@
         '<div style="text-align:center;padding:10px 0">' +
           '<div style="font-size:48px;margin-bottom:8px">🎧</div>' +
           '<h3 style="margin-bottom:4px">磨耳朵 · Podcast Reader</h3>' +
-          '<p style="color:var(--text-dim);font-size:12px">v3.3</p>' +
+          '<p style="color:var(--text-dim);font-size:12px">v' + PR.version + ' · 把文字变成播客，随时随地听</p>' +
         '</div>' +
         '<p style="font-size:12px;line-height:1.8;text-align:center;color:var(--text-dim)">' +
           '把文字变成播客，用 AI 语音朗读，像听播客一样磨耳朵。<br>' +
@@ -675,40 +675,14 @@
     // ---- URL fetch ----
     var btnUrl = PR.$('#btn-fetch-url');
     if (btnUrl) {
-      btnUrl.addEventListener('click', async function() {
+      btnUrl.addEventListener('click', function() {
         var url = PR.$('#cfg-url').value.trim();
-        if (!url) { PR.toast('请输入 URL'); return; }
-        try {
-          PR.toast('抓取中…', 5000);
-          var resp;
-          try {
-            resp = await fetch(url, { mode: 'cors' });
-          } catch(e) {
-            resp = await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(url));
-          }
-          var html2 = await resp.text();
-          var d = document.createElement('div');
-          d.innerHTML = html2;
-          d.querySelectorAll('script,style,nav,header,footer,aside,.sidebar,.nav,.menu,.ad,iframe').forEach(function(el) { el.remove(); });
-          var text = (d.textContent || '').replace(/\n{3,}/g, '\n\n').trim();
-          if (text.length < 100) { PR.toast('内容太少，可能受跨域限制'); return; }
-          PR.elText.textContent = text;
-          if (!PR.elTitle.value.trim()) {
-            var t = d.querySelector('title');
-            PR.elTitle.value = t ? t.textContent.trim() : new URL(url).hostname;
-          }
-          PR.stopPlayback();
-          PR.currentEpId = null;
-          PR.bookmarks = [];
-          PR.annotations = [];
-          PR.resetWords();
-          PR.updateProgressUI();
-          PR.renderBookmarkDots();
-          PR.saveDraft();
-          PR.elModalOverlay.classList.remove('show');
-          PR.toast('已导入网页');
-        } catch(e) {
-          PR.toast('抓取失败：' + e.message + '（受跨域限制，可尝试粘贴文字）', 3000);
+        if (!url) { PR.toast('请输入网页 URL'); return; }
+        if (!/^https?:\/\//.test(url)) { PR.toast('请输入完整网址（以 http:// 或 https:// 开头）'); return; }
+        if (typeof PR.fetchUrl === 'function') {
+          PR.fetchUrl(url);
+        } else {
+          PR.toast('抓取功能未加载，请直接复制文字粘贴', 3000);
         }
       });
     }

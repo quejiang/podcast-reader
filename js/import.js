@@ -198,4 +198,40 @@
     if (files.length) PR.handleFile(files[0]);
   };
 
+  // URL text extraction via CORS proxy
+  PR.fetchUrl = async function(url) {
+    PR.toast('正在抓取网页正文…', 10000);
+    if (typeof PR.showLoading === 'function') PR.showLoading('正在抓取网页正文…');
+    try {
+      var resp;
+      try {
+        resp = await fetch(url, { mode: 'cors' });
+      } catch(e) {
+        resp = await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(url));
+      }
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      var html = await resp.text();
+
+      var div = document.createElement('div');
+      div.innerHTML = html;
+      div.querySelectorAll('script,style,nav,header,footer,aside,iframe,noscript,svg,.sidebar,.nav,.menu,.ad').forEach(function(el) { el.remove(); });
+
+      var content = div.querySelector('article') || div.querySelector('main') || div.querySelector('[role="main"]') || div.body || div;
+      var text = (content.textContent || '').replace(/\n{3,}/g, '\n\n').trim();
+
+      if (text.length < 100) throw new Error('正文太短，可能抓取失败');
+
+      if (typeof PR.hideLoading === 'function') PR.hideLoading();
+      PR.setText(text, url.split('/').pop() || '网页抓取');
+      if (!PR.elTitle.value.trim()) {
+        var t = div.querySelector('title');
+        PR.elTitle.value = t ? t.textContent.trim() : new URL(url).hostname;
+      }
+      PR.elModalOverlay.classList.remove('show');
+    } catch(e) {
+      if (typeof PR.hideLoading === 'function') PR.hideLoading();
+      PR.toast('抓取失败: ' + e.message + '（可尝试复制文字直接粘贴）', 4000);
+    }
+  };
+
 })(window.PR);

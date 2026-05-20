@@ -1,6 +1,9 @@
 // state.js — Global namespace, shared helpers, and all state variables
 window.PR = window.PR || {};
 
+// ---- Version ----
+PR.version = '3.4';
+
 (function(PR) {
   'use strict';
 
@@ -88,6 +91,19 @@ window.PR = window.PR || {};
     } else {
       PR.elText.style.fontFamily = '';
     }
+  };
+
+  // ---- Loading overlay helpers ----
+  PR.showLoading = function(msg) {
+    var el = document.getElementById('loading-overlay');
+    if (!el) { el = PR.$('#loading-overlay'); }
+    if (el) { el.style.display = 'flex'; var t = el.querySelector('#loading-text'); if (t) t.textContent = msg || '加载中…'; }
+  };
+
+  PR.hideLoading = function() {
+    var el = document.getElementById('loading-overlay');
+    if (!el) { el = PR.$('#loading-overlay'); }
+    if (el) el.style.display = 'none';
   };
 
 })(window.PR);
