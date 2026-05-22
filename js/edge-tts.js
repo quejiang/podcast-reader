@@ -12,7 +12,9 @@
 
   // Default fallback voice list (used before async fetch completes)
   PR.edgeVoices = [
+    { id: 'zh-CN-XiaoxiaoMultilingualNeural', name: '晓晓 多语言 (Xiaoxiao) · 女声' },
     { id: 'zh-CN-XiaoxiaoNeural', name: '晓晓 (Xiaoxiao) · 女声' },
+    { id: 'zh-CN-YunxiMultilingualNeural', name: '云希 多语言 (Yunxi) · 男声' },
     { id: 'zh-CN-YunxiNeural', name: '云希 (Yunxi) · 男声' },
     { id: 'zh-CN-YunjianNeural', name: '云健 (Yunjian) · 男声' },
     { id: 'zh-CN-XiaoyiNeural', name: '晓伊 (Xiaoyi) · 女声' },
@@ -162,7 +164,7 @@
     });
 
     // Connect to Edge TTS WebSocket
-    var voiceEdgeName = voiceName || 'zh-CN-XiaoxiaoNeural';
+    var voiceEdgeName = voiceName || 'zh-CN-XiaoxiaoMultilingualNeural';
     // Resolve from cached voices if possible (match by id, edgeName, or voiceURI)
     if (PR.edgeTTS.cachedVoices) {
       var matched = PR.edgeTTS.cachedVoices.find(function(v) {
@@ -173,6 +175,23 @@
     if (voiceEdgeName === voiceName && PR.edgeVoices) {
       var fm = PR.edgeVoices.find(function(v) { return v.id === voiceName; });
       if (fm && fm.id) voiceEdgeName = fm.id;
+    }
+
+    // Auto-upgrade to Multilingual variant when available (richer training data, more natural)
+    if (PR.edgeTTS.cachedVoices && !voiceEdgeName.includes('Multilingual')) {
+      var mlName = voiceEdgeName.replace('Neural', 'MultilingualNeural');
+      var mlMatch = PR.edgeTTS.cachedVoices.find(function(v) {
+        return v.edgeName === mlName || v.id === mlName;
+      });
+      if (mlMatch && mlMatch.edgeName) voiceEdgeName = mlMatch.edgeName;
+    }
+    // Also check fallback list for multilingual
+    if (!voiceEdgeName.includes('Multilingual') && PR.edgeVoices) {
+      var mlName2 = voiceEdgeName.replace('Neural', 'MultilingualNeural');
+      var mlFallback = PR.edgeVoices.find(function(v) {
+        return v.id === mlName2;
+      });
+      if (mlFallback && mlFallback.id) voiceEdgeName = mlFallback.id;
     }
 
     var wsUrl = 'wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=6A5AA1D4EAFF4E9FB37E23D68491D6F4&ConnectionId=' + Date.now();
@@ -194,11 +213,54 @@
     ws.addEventListener('open', function() {
       clearTimeout(timeoutId);
       var ssmlText = PR.edgeTTS._applyPronDictSSML(text);
+
+      // ── 1. 停顿：句末让引擎自主决定，逗号按时间+抖动 ──
+      // strength="medium" — engine picks optimal pause for sentence boundaries
+      ssmlText = ssmlText.replace(/([。！？；])/g, '$1<break strength="medium"/>');
+      ssmlText = ssmlText.replace(/([.!?;])\s+/g, '$1 <break strength="medium"/>');
+      // Comma pauses use jittered timing for subtle, non-repetitive feel
+      var jitter = function(base, pct) {
+        return Math.round(base * (1 + (Math.random() - 0.5) * 2 * pct));
+      };
+      ssmlText = ssmlText.replace(/([，,、])/g, function(m, p) {
+        return p + '<break time="' + jitter(100, 0.2) + 'ms"/>';
+      });
+
+      // ── 2. 逐句音调曲线：句首上扬 → 句尾自然下降 ──
+      var parts = ssmlText.split(/([。！？；.!?;])/);
+      var shapedText = '';
+      for (var i = 0; i < parts.length; i += 2) {
+        var body = parts[i];
+        var punct = parts[i + 1] || '';
+        if (body && body.trim()) {
+          shapedText += '<prosody contour="(0%,+12%)(35%,+5%)(70%,+0%)(100%,-4%)">' + body + punct + '</prosody>';
+        } else if (punct) {
+          shapedText += punct;
+        }
+      }
+      if (shapedText.indexOf('<prosody contour=') === -1 && ssmlText.trim()) {
+        shapedText = '<prosody contour="(0%,+12%)(35%,+5%)(70%,+0%)(100%,-4%)">' + ssmlText + '</prosody>';
+      }
+
+      // ── 3. 语音风格 + 角色 + 强度 ──
+      var voiceStyle = (opts && opts.style) || 'chat';
+      var styleDegree = (opts && opts.styleDegree != null) ? opts.styleDegree : 1.8;
+      var expressWrap = '';
+      if (voiceStyle && voiceStyle !== 'general' && voiceStyle !== 'default') {
+        expressWrap = '<mstts:express-as style="' + PR.esc(voiceStyle) + '" styledegree="' + styleDegree + '" role="Girl">';
+      }
+
+      // ── 4. 组装 SSML ──
       var ssml = 'X-RequestId:' + Date.now() + '\r\nContent-Type:application/ssml+xml\r\nX-Timestamp:' + new Date().toISOString() + '\r\nPath:ssml\r\n\r\n' +
         '<speak xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xmlns:emo="http://www.w3.org/2009/10/emotionml" version="1.0" xml:lang="zh-CN">' +
-        '<voice name="' + PR.esc(voiceEdgeName) + '"><prosody rate="' + (+rate).toFixed(1) + '">' +
-        ssmlText +
-        '</prosody></voice></speak>';
+        '<voice name="' + PR.esc(voiceEdgeName) + '">' +
+        '<mstts:silence type="Lead" value="200ms"/>' +
+        expressWrap +
+        '<prosody rate="' + (+rate).toFixed(1) + '" pitch="+8%">' +
+        shapedText +
+        '</prosody>' +
+        (expressWrap ? '</mstts:express-as>' : '') +
+        '</voice></speak>';
       ws.send(ssml);
     });
 
@@ -284,11 +346,15 @@
   };
 
   // ---- AB loop support in edge playback ----
-  PR.edgeTTS.speakChunk = function(text, voice, rate, onEnd, onBlock) {
+  PR.edgeTTS.speakChunk = function(text, voice, rate, onEnd, onBlock, style) {
+    var cfg = PR.loadAiConfig();
+    var vs = style || (cfg && cfg.edgeVoiceStyle) || 'chat';
     return PR.edgeTTS.synthesize(text, voice, rate, {
+      style: vs,
+      styleDegree: vs === 'general' || vs === 'default' ? 1.0 : 1.8,
+      autoPlay: true,
       onEnd: onEnd,
-      onBlock: onBlock,
-      autoPlay: true
+      onBlock: onBlock
     });
   };
 
@@ -297,11 +363,15 @@
     return new Promise(function(resolve, reject) {
       var chunks = [];
       var cfg = PR.loadAiConfig();
-      var voice = cfg.edgeVoice || 'zh-CN-XiaoxiaoNeural';
+      var voice = cfg.edgeVoice || 'zh-CN-XiaoxiaoMultilingualNeural';
       var rate = PR.getSpeed();
+      var style = cfg.edgeVoiceStyle || 'chat';
+      var styleDegree = (style === 'general' || style === 'default') ? 1.0 : 1.8;
 
       PR.edgeTTS.synthesize(text, voice, rate, {
         autoPlay: false,  // Don't auto-play; we'll play the Blob ourselves
+        style: style,
+        styleDegree: styleDegree,
         onBlock: function(data) {
           chunks.push(new Uint8Array(data));
         },

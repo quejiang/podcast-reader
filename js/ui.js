@@ -289,6 +289,21 @@
               return '<option value="' + v.id + '"' + (cfg.edgeVoice === v.id ? ' selected' : '') + '>' + v.name + '</option>';
             }).join('') +
           '</select>' +
+          '<label>语音风格</label><select id="cfg-eg-style">' +
+            ['chat:聊天（推荐·像抖音配音）',
+             'cheerful:愉悦',
+             'newscast-casual:轻松播报',
+             'friendly:友好',
+             'excited:兴奋',
+             'gentle:温柔',
+             'customerservice:客服',
+             'empathetic:共情',
+             'general:无风格'].map(function(s) {
+               var parts = s.split(':');
+               return '<option value="' + parts[0] + '"' + (cfg.edgeVoiceStyle === parts[0] ? ' selected' : '') + '>' + parts[1] + '</option>';
+            }).join('') +
+          '</select>' +
+          '<small style="color:var(--text-dim)">「聊天」风格最像抖音真人配音，自然口语化</small>' +
         '</div>' +
         '<div id="cfg-el" style="display:none">' +
           '<label>ElevenLabs API Key</label><input type="password" id="cfg-el-key" value="' + PR.esc(cfg.elevenLabsKey || '') + '">' +
@@ -707,7 +722,8 @@
     PR.$('#btn-save-cfg').addEventListener('click', function() {
       var nc = {
         mode: cAiMode.value,
-        edgeVoice: (PR.$('#cfg-eg-voice') ? PR.$('#cfg-eg-voice').value : '') || 'zh-CN-XiaoxiaoNeural',
+        edgeVoice: (PR.$('#cfg-eg-voice') ? PR.$('#cfg-eg-voice').value : '') || 'zh-CN-XiaoxiaoMultilingualNeural',
+        edgeVoiceStyle: (PR.$('#cfg-eg-style') ? PR.$('#cfg-eg-style').value : '') || 'chat',
         elevenLabsKey: (PR.$('#cfg-el-key') ? PR.$('#cfg-el-key').value.trim() : '') || '',
         elevenLabsVoice: (PR.$('#cfg-el-voice') ? PR.$('#cfg-el-voice').value.trim() : '') || '',
         stability: parseFloat((PR.$('#cfg-el-stab') ? PR.$('#cfg-el-stab').value : '') || 0.5),
